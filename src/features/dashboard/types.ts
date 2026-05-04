@@ -1,4 +1,5 @@
 export type RankTier =
+  | "UNRANKED"
   | "IRON"
   | "BRONZE"
   | "SILVER"
@@ -6,19 +7,25 @@ export type RankTier =
   | "PLATINUM"
   | "EMERALD"
   | "DIAMOND"
-  | "MASTER";
+  | "MASTER"
+  | "GRANDMASTER"
+  | "CHALLENGER";
 
 export type LeagueAccount = {
   id: string;
+  customName: string | null;
   summonerName: string;
   tagLine: string;
   region: string;
+  /** Texto guardado (modal: etiqueta User). */
+  accountUser: string | null;
+  /** Texto guardado (modal: etiqueta Psw). */
+  accountPsw: string | null;
   isMain: boolean;
   tier: RankTier;
   division: "I" | "II" | "III" | "IV" | null;
   lp: number;
   winRate: number;
-  averagePosition: number;
   leagueOfGraphsStatus: "synced" | "pending" | "stale";
 };
 
@@ -33,7 +40,8 @@ export type GroupMember = {
 export type GroupInvite = {
   id: string;
   email: string;
-  status: "pending" | "accepted";
+  status: "pending" | "accepted" | "cancelled";
+  invitedAt: string;
 };
 
 export type DashboardSnapshot = {
@@ -44,6 +52,8 @@ export type DashboardSnapshot = {
   };
   members: GroupMember[];
   invites: GroupInvite[];
+  /** Admin de invitaciones (columna invite_admin en group_members); solo ese rol usa "Invitar miembro". */
+  viewerInviteAdmin: boolean;
   sync: {
     lastUpdatedAt: string;
     nextJobLabel: string;

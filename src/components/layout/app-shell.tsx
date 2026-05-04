@@ -1,3 +1,7 @@
+"use client";
+
+import Link from "next/link";
+import { usePathname } from "next/navigation";
 import type { ReactNode } from "react";
 
 type AppShellProps = {
@@ -6,14 +10,22 @@ type AppShellProps = {
 
 type NavIconName = "grid" | "nodes" | "rank" | "mail";
 
-const navItems = [
-  { label: "Dashboard", icon: "grid" as const },
-  { label: "Grupos", icon: "nodes" as const },
-  { label: "Cuentas", icon: "rank" as const },
-  { label: "Invitaciones", icon: "mail" as const },
+const navItems: { label: string; icon: NavIconName; href: string }[] = [
+  { href: "/", label: "Dashboard", icon: "grid" },
+  { href: "#", label: "Grupos", icon: "nodes" },
+  { href: "#", label: "Cuentas", icon: "rank" },
+  { href: "/invitaciones", label: "Invitaciones", icon: "mail" },
 ];
 
+function isNavActive(pathname: string, href: string) {
+  if (href === "#") return false;
+  if (href === "/") return pathname === "/";
+  return pathname === href || pathname.startsWith(`${href}/`);
+}
+
 export function AppShell({ children }: AppShellProps) {
+  const pathname = usePathname() ?? "/";
+
   return (
     <div className="min-h-screen overflow-hidden">
       <div className="pointer-events-none fixed inset-0 -z-10 surface-pattern" />
@@ -24,12 +36,15 @@ export function AppShell({ children }: AppShellProps) {
           <div className="absolute inset-x-0 bottom-0 h-px bg-linear-to-r from-transparent via-cyan-300/45 to-transparent" />
 
           <div className="flex min-w-0 items-center gap-3">
-            <div className="relative flex size-12 shrink-0 items-center justify-center overflow-hidden rounded-xl border border-cyan-300/35 bg-[#071a33] text-lg font-black text-white shadow-xl shadow-cyan-500/20">
+            <Link
+              className="relative flex size-12 shrink-0 items-center justify-center overflow-hidden rounded-xl border border-cyan-300/35 bg-[#071a33] text-lg font-black text-white shadow-xl shadow-cyan-500/20"
+              href="/"
+            >
               <span className="absolute -left-3 -top-3 size-10 rounded-full bg-cyan-300/45 blur-xl" />
               <span className="absolute -right-4 bottom-0 size-10 rounded-full bg-violet-500/55 blur-xl" />
               <span className="absolute inset-0 bg-[linear-gradient(135deg,rgba(25,216,255,0.42),transparent_42%,rgba(124,60,255,0.42))]" />
               <span className="relative z-10 tracking-tight">FX</span>
-            </div>
+            </Link>
             <div className="min-w-0">
               <p className="truncate text-lg font-black tracking-tight text-white">Flex App</p>
               <p className="truncate text-xs font-medium text-slate-300">Equipos, cuentas y rendimiento</p>
@@ -37,26 +52,26 @@ export function AppShell({ children }: AppShellProps) {
           </div>
 
           <nav className="hidden items-center gap-2 md:flex" aria-label="Principal">
-            {navItems.map((item, index) => (
-              <a
-                className={
-                  index === 0
-                    ? "group inline-flex h-11 items-center gap-2 rounded-lg border border-cyan-300/24 bg-cyan-300/10 px-4 text-sm font-bold text-white shadow-lg shadow-cyan-400/10"
-                    : "group inline-flex h-11 items-center gap-2 rounded-lg border border-transparent px-4 text-sm font-semibold text-slate-400 transition duration-150 hover:border-white/10 hover:bg-white/6 hover:text-white"
-                }
-                href="#"
-                key={item.label}
-              >
-                <NavIcon type={item.icon} active={index === 0} />
-                {item.label}
-              </a>
-            ))}
+            {navItems.map((item) => {
+              const active = isNavActive(pathname, item.href);
+              return (
+                <Link
+                  className={
+                    active
+                      ? "group inline-flex h-11 items-center gap-2 rounded-lg border border-cyan-300/24 bg-cyan-300/10 px-4 text-sm font-bold text-white shadow-lg shadow-cyan-400/10"
+                      : "group inline-flex h-11 items-center gap-2 rounded-lg border border-transparent px-4 text-sm font-semibold text-slate-400 transition duration-150 hover:border-white/10 hover:bg-white/6 hover:text-white"
+                  }
+                  href={item.href}
+                  key={item.label}
+                >
+                  <NavIcon active={active} type={item.icon} />
+                  {item.label}
+                </Link>
+              );
+            })}
           </nav>
 
           <div className="flex items-center gap-2">
-            <span className="hidden h-10 items-center rounded-lg border border-cyan-300/25 bg-cyan-400/8 px-4 text-sm font-bold text-cyan-300 shadow-lg shadow-cyan-500/10 sm:inline-flex">
-              Mock data
-            </span>
             <form action="/auth/signout" method="post">
               <button
                 className="inline-flex h-10 items-center gap-2 rounded-lg border border-white/12 bg-white/8 px-3 text-sm font-bold text-white/84 shadow-lg shadow-black/20 transition duration-150 hover:border-cyan-300/24 hover:bg-white/12 hover:text-white active:bg-white/10"

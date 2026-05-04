@@ -19,7 +19,7 @@
 - Componentes React en `PascalCase`.
 - Archivos de componentes en `kebab-case.tsx`.
 - Tipos de dominio en `types.ts` dentro de la feature correspondiente.
-- Datos mock en `features/<feature>/data/`, con nombres explicitos como `mock-dashboard.ts`.
+- Datos mock u offline en `features/<feature>/data/` solo cuando ayuden el desarrollo; no incluir archivos huérfanos en el árbol.
 - Helpers generales en `camelCase` y exportaciones nombradas.
 
 ## Componentes reutilizables

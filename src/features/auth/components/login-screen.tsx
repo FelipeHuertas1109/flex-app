@@ -142,7 +142,7 @@ export function LoginScreen() {
 
                 <div className="mt-5 rounded-xl border border-violet-300/14 bg-violet-500/8 p-4">
                   <div className="flex items-center justify-between gap-4">
-                    <p className="text-sm font-bold text-slate-300">Cobertura mock</p>
+                    <p className="text-sm font-bold text-slate-300">Vista ejemplo</p>
                     <p className="font-mono text-sm font-black text-white">3 / 4</p>
                   </div>
                   <div className="mt-3 h-2 overflow-hidden rounded-full bg-slate-800/90">
