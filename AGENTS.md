@@ -176,3 +176,8 @@
 - `public/fondo.png` es el fondo visual principal de la app.
 - El fondo se aplica desde `src/app/globals.css` en el `body`, con repeticion vertical (`repeat-y`) para que conecte al hacer scroll en pantallas largas.
 - Mantener overlays oscuros y radiales encima del asset para preservar legibilidad de paneles, textos y tablas.
+
+### Login
+- La pantalla `/login` mantiene el mismo lenguaje oscuro/neon del dashboard, pero sin `AppShell` ni navegacion principal para evitar ruido antes de iniciar sesion.
+- El login debe ser Google-only; no agregar email/password ni proveedores adicionales mientras la autenticacion definida sea Google OAuth via Supabase.
+- La vista puede mostrar preview visual del producto, pero la accion principal unica debe ser `Continuar con Google`.

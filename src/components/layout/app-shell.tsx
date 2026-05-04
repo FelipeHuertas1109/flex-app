@@ -57,15 +57,15 @@ export function AppShell({ children }: AppShellProps) {
             <span className="hidden h-10 items-center rounded-lg border border-cyan-300/25 bg-cyan-400/8 px-4 text-sm font-bold text-cyan-300 shadow-lg shadow-cyan-500/10 sm:inline-flex">
               Mock data
             </span>
-            <button
+            <a
               className="inline-flex h-10 items-center gap-2 rounded-lg border border-white/12 bg-white/8 px-3 text-sm font-bold text-white/84 shadow-lg shadow-black/20 transition duration-150 hover:border-cyan-300/24 hover:bg-white/12 hover:text-white active:bg-white/10"
-              type="button"
+              href="/login"
             >
               <span className="flex size-6 items-center justify-center rounded-md bg-white text-xs font-black text-[#111827]">
                 G
               </span>
               Google
-            </button>
+            </a>
           </div>
         </div>
       </header>
