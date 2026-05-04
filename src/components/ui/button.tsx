@@ -9,11 +9,11 @@ type ButtonProps = ButtonHTMLAttributes<HTMLButtonElement> & {
 
 const variants: Record<ButtonVariant, string> = {
   primary:
-    "bg-linear-to-r from-teal to-indigo text-white shadow-md shadow-teal/25 hover:-translate-y-0.5 hover:shadow-lg hover:shadow-teal/35 active:translate-y-0 focus-visible:outline-ring",
+    "border border-teal/50 bg-linear-to-r from-cyan-400 via-teal to-indigo text-white shadow-lg shadow-teal/25 before:absolute before:inset-0 before:bg-[linear-gradient(135deg,rgba(255,255,255,0.28),transparent_45%)] hover:-translate-y-0.5 hover:border-cyan-200/70 hover:shadow-xl hover:shadow-cyan-400/25 active:translate-y-0 focus-visible:outline-ring",
   secondary:
-    "border border-border bg-surface text-foreground shadow-sm shadow-black/5 hover:-translate-y-0.5 hover:border-teal/45 hover:bg-teal-soft/40 hover:shadow-md hover:shadow-teal/10 active:translate-y-0 focus-visible:outline-ring",
+    "border border-cyan-300/20 bg-white/5 text-foreground shadow-lg shadow-black/20 hover:-translate-y-0.5 hover:border-cyan-300/45 hover:bg-cyan-300/10 hover:shadow-cyan-400/10 active:translate-y-0 focus-visible:outline-ring",
   ghost:
-    "text-muted hover:bg-surface-muted hover:text-foreground active:bg-border/60 focus-visible:outline-ring",
+    "border border-transparent text-muted hover:border-cyan-300/20 hover:bg-white/6 hover:text-foreground active:bg-white/10 focus-visible:outline-ring",
 };
 
 export function Button({
@@ -25,7 +25,7 @@ export function Button({
   return (
     <button
       className={cn(
-        "inline-flex h-10 items-center justify-center gap-2 rounded-md px-4 text-sm font-semibold transition duration-200 focus-visible:outline-2 focus-visible:outline-offset-2 disabled:cursor-not-allowed disabled:opacity-60 disabled:hover:translate-y-0",
+        "relative inline-flex h-11 items-center justify-center gap-2 overflow-hidden rounded-lg px-4 text-sm font-bold transition duration-200 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-offset-background disabled:cursor-not-allowed disabled:opacity-60 disabled:hover:translate-y-0",
         variants[variant],
         className,
       )}

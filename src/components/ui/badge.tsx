@@ -10,18 +10,18 @@ type BadgeProps = {
 };
 
 const tones: Record<BadgeTone, string> = {
-  teal: "border-teal/20 bg-teal-soft text-teal",
-  indigo: "border-indigo/20 bg-indigo-soft text-indigo",
-  gold: "border-gold/20 bg-gold-soft text-gold",
-  danger: "border-danger/20 bg-danger-soft text-danger",
-  neutral: "border-border bg-surface-muted text-muted",
+  teal: "border-cyan-300/25 bg-cyan-400/10 text-cyan-200 shadow-cyan-400/10",
+  indigo: "border-violet-300/25 bg-violet-500/12 text-violet-200 shadow-violet-500/10",
+  gold: "border-amber-300/30 bg-amber-400/12 text-amber-200 shadow-amber-400/10",
+  danger: "border-pink-300/30 bg-pink-500/12 text-pink-200 shadow-pink-500/10",
+  neutral: "border-slate-300/14 bg-white/6 text-slate-300 shadow-black/20",
 };
 
 export function Badge({ children, tone = "neutral", className }: BadgeProps) {
   return (
     <span
       className={cn(
-        "inline-flex h-6 items-center rounded-md border px-2 text-xs font-semibold leading-none",
+        "inline-flex h-6 items-center rounded-md border px-2 text-xs font-bold leading-none shadow-sm backdrop-blur",
         tones[tone],
         className,
       )}

@@ -144,3 +144,30 @@
 ### Superficie y patron
 - Pattern de diamantes (45/-45 degrees, `22px`) en lugar de cuadricula simple. Mas dinamismo.
 - Shimmer del skeleton ajustado a tonos azul-gris frios para coincidir con la nueva paleta.
+
+## Decisiones visuales — Rediseño gaming oscuro Mayo 2026
+
+### Direccion visual
+- El rediseño oscuro reemplaza la direccion clara anterior para acercar la app a un dashboard gaming premium: fondo navy/negro, paneles translúcidos, bordes iluminados y glows controlados.
+- La interfaz debe sentirse inmersiva sin perder lectura: fondos tecnológicos, jerarquia fuerte, acentos neon y superficies con profundidad.
+- La funcionalidad y estructura de features se mantienen; el cambio es principalmente de presentacion, densidad visual y microinteracciones.
+
+### Paleta oscura
+- **Background**: `#030712`, con gradientes radiales cyan, violeta y magenta sobre navy profundo.
+- **Surface**: `#07111f` y `#0d1b2f`, usados con transparencia y blur para paneles tipo vidrio oscuro.
+- **Foreground**: `#f7fbff`; texto secundario en slate frio para mantener contraste sin fatiga.
+- **Acentos**: cyan `#19d8ff`, violeta `#7c3cff`, dorado `#f5b83f` y magenta `#ff4f93`.
+- Evitar volver a fondos claros o superficies planas salvo que una vista especifica lo justifique.
+
+### Componentes
+- `Panel` es ahora una superficie oscura con `rounded-xl`, blur, ring claro sutil y pseudo-fondo `neon-panel`.
+- `Button` primary usa gradiente cyan/teal/violeta con borde luminoso; secondary y ghost viven en contexto oscuro con bordes y hover neon.
+- `Badge` usa fondos transparentes tintados, borde visible, sombra suave y texto con contraste alto.
+- `RankBadge` usa tonos oscuros por tier, no variantes pastel claras.
+
+### Dashboard
+- El hero es el bloque principal: panel oscuro grande, badges superiores, titulo fuerte, acciones prominentes, marca FX decorativa y luces internas.
+- Las stat cards son tarjetas neon con icono destacado, valor grande, borde por acento y hover lift minimo.
+- El leaderboard es la pieza central: tabla oscura enmarcada, filas top 1-3 con lavados gold/silver/bronze, medallas hexagonales y barras de rendimiento con gradientes.
+- Las cards de cuentas usan avatar/rango visual, badge Main/Smurf, estado de sincronizacion y CTA compacto integrado.
+- Los skeletons deben imitar esta estructura oscura con shimmer frio y dimensiones estables.

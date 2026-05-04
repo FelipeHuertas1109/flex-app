@@ -18,14 +18,14 @@ const tierLabels: Record<LeagueAccount["tier"], string> = {
 };
 
 const tierStyles: Record<LeagueAccount["tier"], string> = {
-  IRON:     "border-slate-400/20 bg-slate-100 text-slate-500",
-  BRONZE:   "border-amber-800/25 bg-amber-50 text-amber-800",
-  SILVER:   "border-slate-400/25 bg-slate-100 text-slate-600",
-  GOLD:     "border-gold/30 bg-gold-soft text-gold font-bold",
-  PLATINUM: "border-teal/30 bg-teal-soft text-teal font-bold",
-  EMERALD:  "border-emerald-500/30 bg-emerald-50 text-emerald-700 font-bold",
-  DIAMOND:  "border-indigo/30 bg-indigo-soft text-indigo font-bold",
-  MASTER:   "border-fuchsia-500/30 bg-fuchsia-50 text-fuchsia-700 font-bold",
+  IRON:     "border-slate-400/25 bg-slate-500/12 text-slate-300",
+  BRONZE:   "border-orange-400/25 bg-orange-500/12 text-orange-200",
+  SILVER:   "border-slate-200/25 bg-slate-200/12 text-slate-100",
+  GOLD:     "border-amber-300/35 bg-amber-400/14 text-amber-200 font-bold",
+  PLATINUM: "border-cyan-300/35 bg-cyan-400/12 text-cyan-200 font-bold",
+  EMERALD:  "border-emerald-300/35 bg-emerald-400/12 text-emerald-200 font-bold",
+  DIAMOND:  "border-violet-300/35 bg-violet-500/14 text-violet-100 font-bold",
+  MASTER:   "border-fuchsia-300/35 bg-fuchsia-500/14 text-fuchsia-100 font-bold",
 };
 
 export function RankBadge({ account }: RankBadgeProps) {
@@ -34,7 +34,7 @@ export function RankBadge({ account }: RankBadgeProps) {
     : tierLabels[account.tier];
 
   return (
-    <Badge className={cn("shadow-sm shadow-black/5", tierStyles[account.tier])}>
+    <Badge className={cn("h-8 px-3 shadow-lg shadow-black/20", tierStyles[account.tier])}>
       {label}
     </Badge>
   );

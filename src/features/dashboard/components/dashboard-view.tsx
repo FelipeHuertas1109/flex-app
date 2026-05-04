@@ -48,33 +48,44 @@ const accentStyles: Record<
   }
 > = {
   teal: {
-    border: "border-teal/25",
-    glow: "from-teal-soft/70 to-surface",
-    icon: "bg-teal/10 text-teal ring-1 ring-teal/20",
-    meter: "from-teal to-indigo",
-    text: "text-teal",
+    border: "border-cyan-300/36 hover:border-cyan-200/60",
+    glow: "from-cyan-400/18 via-cyan-300/7 to-white/[0.03] shadow-cyan-500/12",
+    icon: "border-cyan-300/38 bg-cyan-400/12 text-cyan-200 shadow-cyan-400/20",
+    meter: "from-cyan-300 via-sky-400 to-violet-500",
+    text: "text-cyan-200",
   },
   indigo: {
-    border: "border-indigo/25",
-    glow: "from-indigo-soft/70 to-surface",
-    icon: "bg-indigo/10 text-indigo ring-1 ring-indigo/20",
-    meter: "from-indigo to-teal",
-    text: "text-indigo",
+    border: "border-violet-300/36 hover:border-violet-200/60",
+    glow: "from-violet-500/18 via-violet-400/7 to-white/[0.03] shadow-violet-500/12",
+    icon: "border-violet-300/38 bg-violet-500/12 text-violet-200 shadow-violet-500/20",
+    meter: "from-violet-300 via-fuchsia-400 to-cyan-300",
+    text: "text-violet-200",
   },
   gold: {
-    border: "border-gold/30",
-    glow: "from-gold-soft/80 to-surface",
-    icon: "bg-gold-soft text-gold ring-1 ring-gold/20",
-    meter: "from-gold to-teal",
-    text: "text-gold",
+    border: "border-amber-300/38 hover:border-amber-200/65",
+    glow: "from-amber-400/18 via-amber-300/7 to-white/[0.03] shadow-amber-500/12",
+    icon: "border-amber-300/42 bg-amber-400/12 text-amber-200 shadow-amber-400/20",
+    meter: "from-amber-300 via-orange-400 to-cyan-300",
+    text: "text-amber-200",
   },
   danger: {
-    border: "border-danger/25",
-    glow: "from-danger-soft/70 to-surface",
-    icon: "bg-danger/10 text-danger ring-1 ring-danger/20",
-    meter: "from-danger to-gold",
-    text: "text-danger",
+    border: "border-pink-300/38 hover:border-pink-200/65",
+    glow: "from-pink-500/18 via-pink-400/7 to-white/[0.03] shadow-pink-500/12",
+    icon: "border-pink-300/42 bg-pink-500/12 text-pink-200 shadow-pink-500/20",
+    meter: "from-pink-400 via-rose-400 to-orange-400",
+    text: "text-pink-200",
   },
+};
+
+const accountMarkStyles: Record<LeagueAccount["tier"], string> = {
+  IRON: "from-slate-500 to-slate-700 text-slate-100 shadow-slate-500/20",
+  BRONZE: "from-amber-800 to-orange-950 text-amber-100 shadow-orange-500/20",
+  SILVER: "from-slate-200 to-slate-500 text-slate-950 shadow-slate-300/20",
+  GOLD: "from-amber-300 to-amber-600 text-amber-950 shadow-amber-400/30",
+  PLATINUM: "from-cyan-300 to-teal-600 text-cyan-950 shadow-cyan-400/30",
+  EMERALD: "from-emerald-300 to-teal-700 text-emerald-950 shadow-emerald-400/30",
+  DIAMOND: "from-sky-300 to-violet-600 text-white shadow-sky-400/30",
+  MASTER: "from-fuchsia-300 to-violet-700 text-white shadow-fuchsia-500/30",
 };
 
 export function DashboardView({ snapshot }: DashboardViewProps) {
@@ -92,34 +103,43 @@ export function DashboardView({ snapshot }: DashboardViewProps) {
   ).length;
 
   return (
-    <div className="animate-enter space-y-5">
-      <section className="grid gap-4 lg:grid-cols-[minmax(0,1.55fr)_minmax(320px,0.8fr)]">
-        <div className="relative overflow-hidden rounded-lg border border-border/70 bg-surface shadow-lg shadow-black/6 ring-1 ring-black/2 sm:p-6 p-5">
-          <div className="absolute inset-x-0 top-0 h-[3px] bg-linear-to-r from-teal via-indigo to-gold" />
-          <div className="absolute right-0 top-0 h-48 w-2/3 bg-[radial-gradient(ellipse_at_top_right,rgba(8,145,178,0.10),transparent_65%)]" />
-          <div className="absolute right-0 bottom-0 h-32 w-1/2 bg-[radial-gradient(ellipse_at_bottom_right,rgba(79,70,229,0.06),transparent_70%)]" />
+    <div className="animate-enter space-y-4">
+      <section className="grid gap-4 xl:grid-cols-[minmax(0,1.58fr)_minmax(360px,0.8fr)]">
+        <div className="relative overflow-hidden rounded-xl border border-cyan-200/14 bg-[#07111f]/86 p-5 shadow-2xl shadow-black/40 ring-1 ring-white/7 backdrop-blur-xl sm:p-7">
+          <div className="absolute inset-0 bg-[radial-gradient(circle_at_62%_10%,rgba(25,216,255,0.16),transparent_30%),radial-gradient(circle_at_92%_18%,rgba(124,60,255,0.2),transparent_33%),linear-gradient(135deg,rgba(255,255,255,0.08),transparent_36%)]" />
+          <div className="absolute -right-12 top-2 hidden size-72 rounded-full border border-cyan-300/10 bg-[conic-gradient(from_130deg,rgba(25,216,255,0.18),rgba(124,60,255,0.05),transparent,rgba(25,216,255,0.18))] opacity-70 blur-[0.3px] md:block" />
+          <div className="absolute right-10 top-9 hidden text-[13rem] font-black leading-none text-white/[0.025] md:block">
+            FX
+          </div>
+          <div className="absolute inset-x-0 top-0 h-px bg-linear-to-r from-cyan-300/60 via-violet-400/45 to-amber-300/35" />
 
-          <div className="relative flex flex-col gap-5 md:flex-row md:items-start md:justify-between">
-            <div className="max-w-2xl">
+          <div className="relative flex flex-col gap-6 lg:flex-row lg:items-start lg:justify-between">
+            <div className="max-w-3xl">
               <div className="flex flex-wrap items-center gap-2">
                 <Badge tone="teal">Grupo privado</Badge>
                 <Badge tone="gold">Flex queue</Badge>
               </div>
-              <h1 className="mt-4 max-w-2xl text-3xl font-black tracking-tight text-foreground sm:text-4xl">
+              <h1 className="mt-4 max-w-3xl text-4xl font-black tracking-tight text-white sm:text-5xl">
                 {snapshot.group.name}
               </h1>
-              <p className="mt-3 max-w-xl text-sm leading-6 text-muted sm:text-base">
+              <p className="mt-3 max-w-2xl text-sm leading-6 text-slate-300 sm:text-base">
                 Coordina cuentas, miembros e invitaciones con una lectura clara del ranking Flex
                 antes de conectar Supabase y Riot data.
               </p>
             </div>
-            <div className="flex flex-col gap-2 sm:flex-row md:flex-col lg:flex-row">
-              <Button>Invitar miembro</Button>
-              <Button variant="secondary">Registrar cuenta</Button>
+            <div className="flex flex-col gap-2 sm:flex-row lg:pt-5">
+              <Button className="min-w-40">
+                <span aria-hidden="true">+</span>
+                Invitar miembro
+              </Button>
+              <Button className="min-w-40" variant="secondary">
+                <span aria-hidden="true">+</span>
+                Registrar cuenta
+              </Button>
             </div>
           </div>
 
-          <dl className="relative mt-6 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+          <dl className="relative mt-7 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
             <StatTile
               accent="teal"
               detail="Miembros activos"
@@ -152,45 +172,50 @@ export function DashboardView({ snapshot }: DashboardViewProps) {
         </div>
 
         <Panel className="overflow-hidden">
-          <div className="border-b border-border/70 bg-linear-to-br from-indigo-soft/60 to-surface p-5">
+          <div className="border-b border-cyan-200/10 bg-[radial-gradient(circle_at_100%_0%,rgba(124,60,255,0.16),transparent_42%)] p-5">
             <div className="flex items-start justify-between gap-3">
               <div>
-                <h2 className="text-base font-bold text-foreground">Sincronizacion</h2>
-                <p className="mt-1 text-sm leading-5 text-muted">
+                <h2 className="text-lg font-black text-white">Sincronizacion</h2>
+                <p className="mt-1 text-sm leading-5 text-slate-300">
                   Preparado para cron jobs y scraping aislado de League of Graphs.
                 </p>
               </div>
               <Badge tone="indigo">Futuro</Badge>
             </div>
-            <div className="mt-4 rounded-lg border border-indigo/15 bg-white/70 p-3">
+            <div className="mt-5 rounded-xl border border-cyan-200/12 bg-black/24 p-4 shadow-inner shadow-black/40">
               <div className="flex items-center justify-between gap-3">
-                <span className="text-xs font-bold uppercase tracking-wide text-muted">Cobertura mock</span>
-                <span className="font-mono text-sm font-black text-foreground">
+                <span className="text-xs font-black uppercase tracking-[0.14em] text-slate-400">Cobertura mock</span>
+                <span className="font-mono text-base font-black text-white">
                   {syncedAccounts}/{accounts.length}
                 </span>
               </div>
-              <div className="mt-2.5 h-1.5 overflow-hidden rounded-full bg-indigo-soft">
+              <div className="mt-3 h-2 overflow-hidden rounded-full bg-slate-800/90">
                 <div
-                  className="h-full rounded-full bg-linear-to-r from-teal to-indigo transition-all duration-700"
+                  className="h-full rounded-full bg-linear-to-r from-cyan-300 via-sky-400 to-violet-500 shadow-lg shadow-cyan-400/30 transition-all duration-700"
                   style={{ width: `${accounts.length ? (syncedAccounts / accounts.length) * 100 : 0}%` }}
                 />
               </div>
             </div>
           </div>
           <div className="p-5">
-            <TimelineRow label="Ultima lectura mock" value={formatSyncDate(snapshot.sync.lastUpdatedAt)} />
-            <TimelineRow label="Frecuencia objetivo" value={snapshot.sync.nextJobLabel} />
-            <TimelineRow label="Auth esperada" value="Google OAuth con Supabase" />
+            <TimelineRow icon="L" label="Ultima lectura mock" value={formatSyncDate(snapshot.sync.lastUpdatedAt)} />
+            <TimelineRow icon="F" label="Frecuencia objetivo" value={snapshot.sync.nextJobLabel} />
+            <TimelineRow icon="A" label="Auth esperada" value="Google OAuth con Supabase" />
           </div>
         </Panel>
       </section>
 
-      <section className="grid gap-4 xl:grid-cols-[minmax(0,1.35fr)_minmax(340px,0.8fr)]">
+      <section className="grid gap-4 xl:grid-cols-[minmax(0,1.35fr)_minmax(360px,0.8fr)]">
         <Panel className="overflow-hidden">
-          <div className="flex flex-col gap-3 border-b border-border/70 bg-surface-muted/50 p-5 sm:flex-row sm:items-center sm:justify-between">
-            <div>
-              <h2 className="text-lg font-black text-foreground">Leaderboard Flex</h2>
-              <p className="mt-0.5 text-sm text-muted">Ordenado por Posicion Promedio mock.</p>
+          <div className="flex flex-col gap-3 border-b border-cyan-200/10 bg-white/[0.025] p-5 sm:flex-row sm:items-center sm:justify-between">
+            <div className="flex items-center gap-3">
+              <div className="hex-mark flex size-12 shrink-0 items-center justify-center bg-linear-to-br from-amber-300 to-amber-600 text-sm font-black text-amber-950 shadow-lg shadow-amber-400/20">
+                1
+              </div>
+              <div>
+                <h2 className="text-xl font-black text-white">Leaderboard Flex</h2>
+                <p className="mt-0.5 text-sm text-slate-400">Ordenado por Posicion Promedio mock.</p>
+              </div>
             </div>
             <Badge tone="gold" className="self-start">
               Top del grupo
@@ -199,16 +224,16 @@ export function DashboardView({ snapshot }: DashboardViewProps) {
 
           {sortedAccounts.length > 0 ? (
             <>
-              <div className="hidden overflow-x-auto md:block">
-                <table className="w-full min-w-[760px] border-separate border-spacing-0 text-left">
-                  <thead className="bg-foreground/3 text-xs uppercase tracking-wide text-muted">
+              <div className="hidden overflow-x-auto p-4 md:block">
+                <table className="w-full min-w-[780px] border-separate border-spacing-0 overflow-hidden rounded-xl border border-cyan-200/10 text-left">
+                  <thead className="bg-black/22 text-xs uppercase tracking-[0.12em] text-slate-400">
                     <tr>
-                      <th className="px-5 py-3 font-bold">Jugador</th>
-                      <th className="px-5 py-3 font-bold">Cuenta</th>
-                      <th className="px-5 py-3 font-bold">Rango</th>
-                      <th className="px-5 py-3 font-bold">LP</th>
-                      <th className="px-5 py-3 font-bold">Win rate</th>
-                      <th className="px-5 py-3 font-bold">Posicion Promedio</th>
+                      <th className="px-5 py-4 font-black">Jugador</th>
+                      <th className="px-5 py-4 font-black">Cuenta</th>
+                      <th className="px-5 py-4 font-black">Rango</th>
+                      <th className="px-5 py-4 font-black">LP</th>
+                      <th className="px-5 py-4 font-black">Win rate</th>
+                      <th className="px-5 py-4 font-black">Posicion Promedio</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -261,28 +286,34 @@ function StatTile({
   return (
     <div
       className={cn(
-        "rounded-lg border bg-linear-to-br p-4 shadow-sm transition-shadow duration-200 hover:shadow-md",
+        "group relative overflow-hidden rounded-xl border bg-linear-to-br p-4 shadow-xl transition-all duration-200 hover:-translate-y-0.5",
         styles.border,
         styles.glow,
       )}
     >
+      <div className="absolute inset-x-0 top-0 h-px bg-linear-to-r from-white/30 via-white/5 to-transparent" />
       <div className="flex items-start justify-between gap-3">
-        <dt className="text-xs font-bold uppercase tracking-wide text-muted">{label}</dt>
-        <span className={cn("flex size-9 shrink-0 items-center justify-center rounded-lg text-xs font-black", styles.icon)}>
+        <dt className="text-xs font-black uppercase tracking-[0.14em] text-slate-400">{label}</dt>
+        <span className={cn("flex size-12 shrink-0 items-center justify-center rounded-xl border text-sm font-black shadow-lg", styles.icon)}>
           {icon}
         </span>
       </div>
-      <dd className="mt-3 text-3xl font-black tabular-nums text-foreground">{value}</dd>
-      <p className="mt-1 text-xs font-medium text-muted">{detail}</p>
+      <dd className="mt-3 text-4xl font-black tabular-nums text-white">{value}</dd>
+      <p className="mt-1 text-sm font-medium text-slate-400">{detail}</p>
     </div>
   );
 }
 
-function TimelineRow({ label, value }: { label: string; value: string }) {
+function TimelineRow({ icon, label, value }: { icon: string; label: string; value: string }) {
   return (
-    <div className="flex items-start justify-between gap-4 border-t border-border/70 py-3 first:border-t-0 first:pt-0 last:pb-0">
-      <span className="text-sm text-muted">{label}</span>
-      <span className="max-w-48 text-right text-sm font-semibold text-foreground">{value}</span>
+    <div className="flex items-start justify-between gap-4 border-t border-cyan-200/10 py-3 first:border-t-0 first:pt-0 last:pb-0">
+      <div className="flex min-w-0 items-center gap-3">
+        <span className="flex size-7 shrink-0 items-center justify-center rounded-lg border border-cyan-200/14 bg-white/5 text-[10px] font-black text-cyan-200">
+          {icon}
+        </span>
+        <span className="text-sm text-slate-400">{label}</span>
+      </div>
+      <span className="max-w-52 text-right text-sm font-bold text-white">{value}</span>
     </div>
   );
 }
@@ -291,28 +322,28 @@ function LeaderboardRow({ account, index }: { account: AccountWithMember; index:
   return (
     <tr
       className={cn(
-        "group transition duration-150 hover:bg-teal/5",
-        index === 0 && "bg-[linear-gradient(90deg,rgba(251,191,36,0.09),rgba(245,158,11,0.04)_45%,transparent)]",
-        index === 1 && "bg-[linear-gradient(90deg,rgba(148,163,184,0.09),rgba(100,116,139,0.04)_45%,transparent)]",
-        index === 2 && "bg-[linear-gradient(90deg,rgba(180,83,9,0.08),rgba(146,64,14,0.04)_45%,transparent)]",
+        "group transition duration-150 hover:bg-cyan-300/[0.055]",
+        index === 0 && "bg-[linear-gradient(90deg,rgba(245,184,63,0.13),rgba(245,184,63,0.04)_42%,transparent)]",
+        index === 1 && "bg-[linear-gradient(90deg,rgba(148,163,184,0.13),rgba(148,163,184,0.04)_42%,transparent)]",
+        index === 2 && "bg-[linear-gradient(90deg,rgba(251,146,60,0.12),rgba(251,146,60,0.04)_42%,transparent)]",
       )}
     >
-      <td className="border-b border-border/60 px-5 py-4">
+      <td className="border-b border-cyan-200/10 px-5 py-4">
         <MemberIdentity member={account.member} rank={index + 1} />
       </td>
-      <td className="border-b border-border/60 px-5 py-4">
+      <td className="border-b border-cyan-200/10 px-5 py-4">
         <AccountIdentity account={account} />
       </td>
-      <td className="border-b border-border/60 px-5 py-4">
+      <td className="border-b border-cyan-200/10 px-5 py-4">
         <RankBadge account={account} />
       </td>
-      <td className="border-b border-border/60 px-5 py-4 font-mono text-sm font-bold text-foreground">
+      <td className="border-b border-cyan-200/10 px-5 py-4 font-mono text-sm font-black text-white">
         {account.lp}
       </td>
-      <td className="border-b border-border/60 px-5 py-4 text-sm font-semibold text-foreground">
+      <td className="border-b border-cyan-200/10 px-5 py-4 text-sm font-black text-white">
         {account.winRate}%
       </td>
-      <td className="border-b border-border/60 px-5 py-4">
+      <td className="border-b border-cyan-200/10 px-5 py-4">
         <PerformanceMeter value={account.averagePosition} />
       </td>
     </tr>
@@ -322,17 +353,17 @@ function LeaderboardRow({ account, index }: { account: AccountWithMember; index:
 function LeaderboardCard({ account, index }: { account: AccountWithMember; index: number }) {
   const cardStyle =
     index === 0
-      ? "border-amber-300/45 bg-linear-to-br from-amber-50 to-surface shadow-amber-100/60"
+      ? "border-amber-300/40 bg-linear-to-br from-amber-400/14 to-white/[0.035] shadow-amber-500/12"
       : index === 1
-        ? "border-slate-300/50 bg-linear-to-br from-slate-50 to-surface"
+        ? "border-slate-300/28 bg-linear-to-br from-slate-300/12 to-white/[0.035]"
         : index === 2
-          ? "border-amber-700/30 bg-linear-to-br from-amber-50/60 to-surface"
-          : "border-border/70 bg-surface";
+          ? "border-orange-300/32 bg-linear-to-br from-orange-500/12 to-white/[0.035]"
+          : "border-cyan-200/12 bg-white/[0.04]";
 
   return (
     <article
       className={cn(
-        "rounded-lg border p-4 shadow-sm",
+        "rounded-xl border p-4 shadow-xl shadow-black/20",
         cardStyle,
       )}
     >
@@ -357,26 +388,26 @@ function LeaderboardCard({ account, index }: { account: AccountWithMember; index
 function MemberIdentity({ member, rank }: { member: GroupMember; rank: number }) {
   const badgeStyle =
     rank === 1
-      ? "bg-linear-to-br from-amber-300 to-amber-500 text-amber-900 border-amber-300/60 shadow-lg shadow-amber-200/50"
+      ? "bg-linear-to-br from-amber-300 to-amber-600 text-amber-950 border-amber-200/60 shadow-amber-400/35"
       : rank === 2
-        ? "bg-linear-to-br from-slate-200 to-slate-400 text-slate-700 border-slate-300/60 shadow-md shadow-slate-200/40"
+        ? "bg-linear-to-br from-slate-100 to-slate-500 text-slate-950 border-slate-200/50 shadow-slate-300/22"
         : rank === 3
-          ? "bg-linear-to-br from-amber-600 to-amber-800 text-amber-100 border-amber-600/60 shadow-md shadow-amber-700/25"
-          : "border-border bg-surface-muted text-muted";
+          ? "bg-linear-to-br from-orange-400 to-orange-800 text-orange-50 border-orange-300/40 shadow-orange-500/25"
+          : "border-slate-500/30 bg-slate-900/70 text-slate-300 shadow-black/20";
 
   return (
     <div className="flex min-w-0 items-center gap-3">
       <div
         className={cn(
-          "flex size-10 shrink-0 items-center justify-center rounded-lg border text-sm font-black",
+          "hex-mark flex size-12 shrink-0 items-center justify-center border text-base font-black shadow-lg",
           badgeStyle,
         )}
       >
         {rank}
       </div>
       <div className="min-w-0">
-        <div className="truncate font-semibold text-foreground">{member.name}</div>
-        <div className="mt-0.5 truncate text-xs text-muted">{formatRole(member.role)}</div>
+        <div className="truncate font-black text-white">{member.name}</div>
+        <div className="mt-0.5 truncate text-xs font-medium text-slate-400">{formatRole(member.role)}</div>
       </div>
     </div>
   );
@@ -384,21 +415,39 @@ function MemberIdentity({ member, rank }: { member: GroupMember; rank: number })
 
 function AccountIdentity({ account }: { account: AccountWithMember }) {
   return (
-    <div className="min-w-0">
-      <div className="truncate font-semibold text-foreground">
-        {account.summonerName}
-        <span className="text-muted">#{account.tagLine}</span>
+    <div className="flex min-w-0 items-center gap-3">
+      <AccountMark account={account} />
+      <div className="min-w-0">
+        <div className="truncate font-black text-white">
+          {account.summonerName}
+          <span className="text-slate-400">#{account.tagLine}</span>
+        </div>
+        <div className="mt-1 flex flex-wrap items-center gap-2 text-xs font-medium text-slate-400">
+          <span>{account.region}</span>
+          <span aria-hidden="true">/</span>
+          <span>{account.isMain ? "Main" : "Smurf"}</span>
+        </div>
+        <div className="mt-2">
+          <Badge tone={statusTone[account.leagueOfGraphsStatus]}>
+            {statusLabel[account.leagueOfGraphsStatus]}
+          </Badge>
+        </div>
       </div>
-      <div className="mt-1 flex flex-wrap items-center gap-2 text-xs text-muted">
-        <span>{account.region}</span>
-        <span aria-hidden="true">/</span>
-        <span>{account.isMain ? "Main" : "Smurf"}</span>
-      </div>
-      <div className="mt-2">
-        <Badge tone={statusTone[account.leagueOfGraphsStatus]}>
-          {statusLabel[account.leagueOfGraphsStatus]}
-        </Badge>
-      </div>
+    </div>
+  );
+}
+
+function AccountMark({ account, className }: { account: LeagueAccount; className?: string }) {
+  return (
+    <div
+      className={cn(
+        "relative flex size-11 shrink-0 items-center justify-center rounded-xl border border-white/12 bg-linear-to-br text-sm font-black shadow-lg",
+        accountMarkStyles[account.tier],
+        className,
+      )}
+    >
+      <span className="absolute inset-1 rounded-lg border border-white/16" />
+      <span className="relative">{account.summonerName.slice(0, 1)}</span>
     </div>
   );
 }
@@ -410,12 +459,12 @@ function PerformanceMeter({ value }: { value: number }) {
 
   return (
     <div className="min-w-40">
-      <div className="flex items-center gap-3">
-        <span className={cn("font-mono text-base font-black tabular-nums", styles.text)}>{value.toFixed(1)}</span>
-        <span className="text-xs text-muted">/ 10</span>
+      <div className="flex items-baseline gap-2">
+        <span className={cn("font-mono text-xl font-black tabular-nums", styles.text)}>{value.toFixed(1)}</span>
+        <span className="text-xs font-semibold text-slate-500">/ 10</span>
       </div>
-      <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-border/60">
-        <div className={cn("h-full rounded-full bg-linear-to-r transition-all duration-500", styles.meter)} style={{ width }} />
+      <div className="mt-2 h-2 overflow-hidden rounded-full bg-slate-800/90">
+        <div className={cn("h-full rounded-full bg-linear-to-r shadow-lg transition-all duration-500", styles.meter)} style={{ width }} />
       </div>
     </div>
   );
@@ -423,9 +472,9 @@ function PerformanceMeter({ value }: { value: number }) {
 
 function MetricPill({ label, value }: { label: string; value: string }) {
   return (
-    <div className="rounded-md border border-border/70 bg-surface-muted/60 px-3 py-2">
-      <p className="text-xs font-semibold text-muted">{label}</p>
-      <p className="mt-0.5 font-mono text-sm font-black text-foreground">{value}</p>
+    <div className="rounded-lg border border-cyan-200/10 bg-black/22 px-3 py-2">
+      <p className="text-xs font-bold text-slate-500">{label}</p>
+      <p className="mt-0.5 font-mono text-sm font-black text-white">{value}</p>
     </div>
   );
 }
@@ -434,9 +483,14 @@ function AccountsPanel({ accounts }: { accounts: AccountWithMember[] }) {
   return (
     <Panel className="p-5">
       <div className="flex items-start justify-between gap-3">
-        <div>
-          <h2 className="text-base font-black text-foreground">Cuentas registradas</h2>
-          <p className="mt-0.5 text-xs text-muted">Vista rapida por dueno, estado y rol.</p>
+        <div className="flex items-center gap-3">
+          <div className="flex size-10 items-center justify-center rounded-xl border border-cyan-200/16 bg-cyan-400/10 text-sm font-black text-cyan-200">
+            C
+          </div>
+          <div>
+            <h2 className="text-lg font-black text-white">Cuentas registradas</h2>
+            <p className="mt-0.5 text-xs text-slate-400">Vista rapida por dueno, estado y rol.</p>
+          </div>
         </div>
         <Badge tone="neutral">{accounts.length}</Badge>
       </div>
@@ -445,25 +499,29 @@ function AccountsPanel({ accounts }: { accounts: AccountWithMember[] }) {
         <div className="mt-4 grid gap-3">
           {accounts.map((account) => (
             <article
-              className="group rounded-lg border border-border/70 bg-surface p-4 transition-all duration-200 hover:-translate-y-0.5 hover:border-teal/35 hover:shadow-lg hover:shadow-teal/8"
+              className={cn(
+                "group rounded-xl border bg-white/[0.035] p-4 shadow-xl shadow-black/18 transition-all duration-200 hover:-translate-y-0.5 hover:bg-white/[0.055]",
+                account.isMain ? "border-violet-300/22 hover:border-violet-200/44" : "border-cyan-300/22 hover:border-cyan-200/44",
+              )}
               key={account.id}
             >
               <div className="flex items-start justify-between gap-3">
                 <AccountIdentity account={account} />
                 <Badge tone={account.isMain ? "indigo" : "neutral"}>{account.isMain ? "Main" : "Smurf"}</Badge>
               </div>
-              <div className="mt-4 flex items-center justify-between gap-3 border-t border-border/60 pt-3">
+              <div className="mt-4 flex items-center justify-between gap-3 border-t border-cyan-200/10 pt-3">
                 <div className="min-w-0">
-                  <p className="truncate text-xs font-bold uppercase tracking-wide text-muted">Dueno</p>
-                  <p className="mt-0.5 truncate text-sm font-semibold text-foreground">
+                  <p className="truncate text-xs font-black uppercase tracking-[0.14em] text-slate-500">Dueno</p>
+                  <p className="mt-0.5 truncate text-sm font-bold text-white">
                     {account.member.name} · {formatRole(account.member.role)}
                   </p>
+                  <p className="mt-1 text-xs leading-5 text-slate-400">{statusDetail[account.leagueOfGraphsStatus]}</p>
                 </div>
-                <Button className="h-7 px-3 text-xs" variant="ghost">
+                <Button className="h-8 px-3 text-xs" variant="ghost">
                   Ver
+                  <span aria-hidden="true">›</span>
                 </Button>
               </div>
-              <p className="mt-2.5 text-xs leading-5 text-muted">{statusDetail[account.leagueOfGraphsStatus]}</p>
             </article>
           ))}
         </div>
@@ -483,12 +541,12 @@ function MembersPanel({ members }: { members: GroupMember[] }) {
     <Panel className="p-5">
       <div className="flex items-start justify-between gap-3">
         <div>
-          <h2 className="text-base font-black text-foreground">Miembros</h2>
-          <p className="mt-0.5 text-xs text-muted">Cuentas asociadas por persona.</p>
+          <h2 className="text-lg font-black text-white">Miembros</h2>
+          <p className="mt-0.5 text-xs text-slate-400">Cuentas asociadas por persona.</p>
         </div>
         <Badge tone="neutral">{members.length}</Badge>
       </div>
-      <div className="mt-4 divide-y divide-border/70">
+      <div className="mt-4 divide-y divide-cyan-200/10">
         {members.map((member) => (
           <div
             className="flex items-center justify-between gap-3 py-3 first:pt-0 last:pb-0"
@@ -497,15 +555,15 @@ function MembersPanel({ members }: { members: GroupMember[] }) {
             <div className="flex min-w-0 items-center gap-2.5">
               <div
                 className={cn(
-                  "flex size-7 shrink-0 items-center justify-center rounded-md text-xs font-black",
-                  member.role === "owner" ? "bg-indigo/10 text-indigo ring-1 ring-indigo/15" : "bg-surface-muted text-muted",
+                  "flex size-9 shrink-0 items-center justify-center rounded-xl border text-xs font-black shadow-lg",
+                  member.role === "owner" ? "border-violet-300/28 bg-violet-500/14 text-violet-200 shadow-violet-500/10" : "border-cyan-200/12 bg-white/6 text-slate-300 shadow-black/20",
                 )}
               >
                 {member.name[0]}
               </div>
               <div className="min-w-0">
-                <p className="truncate text-sm font-semibold text-foreground">{member.name}</p>
-                <p className="truncate text-xs text-muted">{member.email}</p>
+                <p className="truncate text-sm font-bold text-white">{member.name}</p>
+                <p className="truncate text-xs text-slate-500">{member.email}</p>
               </div>
             </div>
             <Badge tone={member.role === "owner" ? "indigo" : "neutral"}>
@@ -525,8 +583,8 @@ function InvitesPanel({ snapshot }: { snapshot: DashboardSnapshot }) {
     <Panel className="p-5">
       <div className="flex items-start justify-between gap-3">
         <div>
-          <h2 className="text-base font-black text-foreground">Invitaciones</h2>
-          <p className="mt-0.5 text-xs text-muted">Invita amigos y completa el grupo.</p>
+          <h2 className="text-lg font-black text-white">Invitaciones</h2>
+          <p className="mt-0.5 text-xs text-slate-400">Invita amigos y completa el grupo.</p>
         </div>
         <Button className="h-8 px-3 text-xs" variant="secondary">
           Nueva
@@ -534,13 +592,13 @@ function InvitesPanel({ snapshot }: { snapshot: DashboardSnapshot }) {
       </div>
 
       {pendingInvites.length > 0 ? (
-        <div className="mt-4 divide-y divide-border/70">
+        <div className="mt-4 divide-y divide-cyan-200/10">
           {pendingInvites.map((invite) => (
             <div
               className="flex items-center justify-between gap-4 py-3 first:pt-0 last:pb-0"
               key={invite.id}
             >
-              <span className="min-w-0 truncate text-sm font-semibold text-foreground">
+              <span className="min-w-0 truncate text-sm font-bold text-white">
                 {invite.email}
               </span>
               <Badge tone="gold">Pendiente</Badge>
@@ -568,12 +626,12 @@ function EmptyState({
   title: string;
 }) {
   return (
-    <div className="my-2 rounded-lg border border-dashed border-teal/35 bg-linear-to-b from-teal-soft/25 to-transparent p-7 text-center">
-      <div className="mx-auto flex size-11 items-center justify-center rounded-lg bg-teal/10 text-lg font-black text-teal ring-1 ring-teal/20">
-        ⊕
+    <div className="my-2 rounded-xl border border-dashed border-cyan-300/28 bg-cyan-400/6 p-7 text-center">
+      <div className="mx-auto flex size-12 items-center justify-center rounded-xl border border-cyan-300/28 bg-cyan-400/10 text-lg font-black text-cyan-200 shadow-lg shadow-cyan-400/10">
+        +
       </div>
-      <h3 className="mt-3.5 text-sm font-bold text-foreground">{title}</h3>
-      <p className="mx-auto mt-2 max-w-xs text-sm leading-6 text-muted">{description}</p>
+      <h3 className="mt-3.5 text-sm font-black text-white">{title}</h3>
+      <p className="mx-auto mt-2 max-w-xs text-sm leading-6 text-slate-400">{description}</p>
       <Button className="mt-5 h-9 px-4 text-sm" variant="secondary">
         {action}
       </Button>
