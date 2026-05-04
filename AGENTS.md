@@ -43,6 +43,11 @@ This version has breaking changes — APIs, conventions, and file structure may 
 - La paleta base debe sentirse moderna, limpia y enfocada en producto: fondos claros, tinta profunda, acentos teal, indigo y dorado moderado.
 - Evitar interfaces dominadas por una sola familia de color, gradientes decorativos excesivos, orbes o fondos puramente ornamentales.
 - Usar radios sobrios, densidad media y jerarquia clara para que la app se perciba como herramienta operativa, no landing page.
+- La direccion visual actual combina dashboard SaaS premium con personalidad sutil de League of Legends: superficies claras, tinta profunda, acentos teal/indigo/dorado, gradientes suaves funcionales y patrones discretos de fondo.
+- Las cards deben usar radio `rounded-lg` como limite general, bordes visibles, sombras suaves y estados hover con elevacion leve solo cuando sean elementos interactivos o escaneables.
+- Los badges deben comunicar estado o jerarquia con color y texto, nunca depender solo del color. Para tiers/rangos se permite una paleta especifica por tier siempre que conserve contraste.
+- Los botones primarios deben reservarse para la accion principal de la vista o bloque. Los secundarios cubren acciones de creacion relacionadas y los ghost acciones compactas de baja friccion.
+- Evitar iconografia pesada si no hay libreria instalada. Se permiten marcas tipograficas o iniciales dentro de contenedores visuales cuando aporten escaneo sin agregar dependencias.
 
 ## UX, carga y estados vacios
 
@@ -50,12 +55,17 @@ This version has breaking changes — APIs, conventions, and file structure may 
 - Los skeletons deben vivir cerca de la vista si son especificos de una feature, o en `components/feedback` si son genericos.
 - Los estados vacios deben explicar el siguiente paso accionable sin bloquear el resto de la pantalla.
 - Las tablas/listas deben conservar encabezados, alineacion y alturas predecibles durante carga y vacio.
+- Los skeleton loaders deben imitar la estructura real de la vista final: hero, acciones, stat cards, leaderboard desktop/mobile y paneles laterales.
+- Los estados vacios deben tener composicion propia, descripcion corta y CTA visible. No usar solo texto plano dentro de una caja.
+- En mobile, tablas densas deben convertirse en cards cuando mejore la lectura y evite overflow horizontal.
+- El leaderboard es un componente principal del producto: debe destacar top 1-3, mostrar cuenta/rango/LP/win rate/Posicion Promedio con alta escaneabilidad y mantener version responsive.
 
 ## Animaciones
 
 - Usar animaciones sutiles: entrada leve, hover discreto y shimmer de skeleton.
 - Respetar `prefers-reduced-motion` desde CSS global.
 - No usar animaciones que cambien layout o distraigan de lectura de datos.
+- Las microinteracciones deben ser breves y consistentes: hover lift minimo, cambio suave de borde/sombra y shimmer de carga. No introducir animaciones lentas, loops decorativos dominantes ni efectos gamer recargados.
 
 ## Supabase y autenticacion futura
 
