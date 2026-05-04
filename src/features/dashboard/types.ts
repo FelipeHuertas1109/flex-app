@@ -54,6 +54,8 @@ export type DashboardSnapshot = {
   invites: GroupInvite[];
   /** Admin de invitaciones (columna invite_admin en group_members); solo ese rol usa "Invitar miembro". */
   viewerInviteAdmin: boolean;
+  /** Owner del grupo: puede renombrar el squad en el hero del dashboard. */
+  viewerIsOwner: boolean;
   sync: {
     lastUpdatedAt: string;
     nextJobLabel: string;

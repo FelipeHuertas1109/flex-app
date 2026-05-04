@@ -87,7 +87,7 @@ export async function getDashboardSnapshot(): Promise<DashboardSnapshot | null> 
 
   const { data: memberRecord } = await supabase
     .from("group_members")
-    .select("group_id, invite_admin")
+    .select("group_id, invite_admin, role")
     .eq("user_id", user.id)
     .limit(1)
     .maybeSingle();
@@ -172,6 +172,7 @@ export async function getDashboardSnapshot(): Promise<DashboardSnapshot | null> 
     members,
     invites,
     viewerInviteAdmin: Boolean(memberRecord.invite_admin),
+    viewerIsOwner: memberRecord.role === "owner",
     sync: {
       lastUpdatedAt: new Date().toISOString(),
       nextJobLabel: "Cron job deshabilitado (v1)",

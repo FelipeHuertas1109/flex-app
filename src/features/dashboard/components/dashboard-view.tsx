@@ -13,6 +13,7 @@ import type {
   LeagueAccount,
 } from "@/features/dashboard/types";
 import { InviteMemberButton } from "@/features/invites/components/invite-member-dialog";
+import { RenameGroupButton } from "@/features/groups/components/rename-group-dialog";
 import { cn } from "@/lib/utils";
 
 type DashboardViewProps = {
@@ -145,9 +146,14 @@ export function DashboardView({ snapshot }: DashboardViewProps) {
                 <Badge tone="teal">Grupo privado</Badge>
                 <Badge tone="gold">Flex queue</Badge>
               </div>
-              <h1 className="mt-4 max-w-3xl text-4xl font-black tracking-tight text-white sm:text-5xl">
-                {snapshot.group.name}
-              </h1>
+              <div className="mt-4 flex flex-wrap items-end gap-3">
+                <h1 className="max-w-[min(100%,36rem)] text-4xl font-black tracking-tight text-white sm:text-5xl">
+                  {snapshot.group.name}
+                </h1>
+                {snapshot.viewerIsOwner ? (
+                  <RenameGroupButton currentName={snapshot.group.name} groupId={snapshot.group.id} />
+                ) : null}
+              </div>
               <p className="mt-3 max-w-2xl text-sm leading-6 text-slate-300 sm:text-base">
                 Coordina cuentas y miembros con una lectura clara del ranking Flex antes de conectar datos
                 Riot en profundidad.
