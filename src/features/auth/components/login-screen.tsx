@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { signInWithGoogle } from "@/features/auth/actions";
 
 const sessionHighlights = [
   {
@@ -73,15 +74,15 @@ export function LoginScreen() {
                   invitaciones y rendimiento Flex con una interfaz pensada para squads.
                 </p>
 
-                <div className="mt-8">
-                  <Button className="h-12 w-full justify-center text-base sm:w-auto sm:min-w-80">
+                <form action={signInWithGoogle} className="mt-8">
+                  <Button className="h-12 w-full justify-center text-base sm:w-auto sm:min-w-80" type="submit">
                     <GoogleMark />
                     Continuar con Google
                   </Button>
                   <p className="mt-4 max-w-md text-xs leading-5 text-slate-500">
-                    Al continuar se usara Google OAuth via Supabase cuando la autenticacion quede conectada.
+                    Al continuar te enviaremos a Google OAuth via Supabase y volveras al dashboard.
                   </p>
-                </div>
+                </form>
 
                 <div className="mt-8 grid gap-3 sm:grid-cols-3">
                   {sessionHighlights.map((item) => (

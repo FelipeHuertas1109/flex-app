@@ -181,3 +181,4 @@
 - La pantalla `/login` mantiene el mismo lenguaje oscuro/neon del dashboard, pero sin `AppShell` ni navegacion principal para evitar ruido antes de iniciar sesion.
 - El login debe ser Google-only; no agregar email/password ni proveedores adicionales mientras la autenticacion definida sea Google OAuth via Supabase.
 - La vista puede mostrar preview visual del producto, pero la accion principal unica debe ser `Continuar con Google`.
+- OAuth usa `@supabase/ssr`, callback `/auth/callback` y cookies SSR. El dashboard `/` redirige a `/login` si no hay usuario autenticado.
