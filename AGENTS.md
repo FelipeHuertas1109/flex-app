@@ -171,3 +171,8 @@
 - El leaderboard es la pieza central: tabla oscura enmarcada, filas top 1-3 con lavados gold/silver/bronze, medallas hexagonales y barras de rendimiento con gradientes.
 - Las cards de cuentas usan avatar/rango visual, badge Main/Smurf, estado de sincronizacion y CTA compacto integrado.
 - Los skeletons deben imitar esta estructura oscura con shimmer frio y dimensiones estables.
+
+### Fondo global
+- `public/fondo.png` es el fondo visual principal de la app.
+- El fondo se aplica desde `src/app/globals.css` en el `body`, con repeticion vertical (`repeat-y`) para que conecte al hacer scroll en pantallas largas.
+- Mantener overlays oscuros y radiales encima del asset para preservar legibilidad de paneles, textos y tablas.

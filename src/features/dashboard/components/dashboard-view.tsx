@@ -18,6 +18,7 @@ type AccountWithMember = LeagueAccount & {
 };
 
 type Accent = "teal" | "indigo" | "gold" | "danger";
+type StatIconName = "members" | "accounts" | "crown" | "invite";
 
 const statusTone: Record<LeagueAccount["leagueOfGraphsStatus"], "teal" | "gold" | "danger"> = {
   synced: "teal",
@@ -143,28 +144,28 @@ export function DashboardView({ snapshot }: DashboardViewProps) {
             <StatTile
               accent="teal"
               detail="Miembros activos"
-              icon="M"
+              icon="members"
               label="Miembros"
               value={snapshot.members.length.toString()}
             />
             <StatTile
               accent="indigo"
               detail={`${mainAccounts} mains configuradas`}
-              icon="C"
+              icon="accounts"
               label="Cuentas"
               value={accounts.length.toString()}
             />
             <StatTile
               accent="gold"
               detail="Posicion Promedio lider"
-              icon="P"
+              icon="crown"
               label="Mejor posicion"
               value={bestAverage.toFixed(1)}
             />
             <StatTile
               accent={pendingInvites > 0 ? "danger" : "teal"}
               detail="Invitaciones pendientes"
-              icon="I"
+              icon="invite"
               label="Invitaciones"
               value={pendingInvites.toString()}
             />
@@ -207,10 +208,11 @@ export function DashboardView({ snapshot }: DashboardViewProps) {
 
       <section className="grid gap-4 xl:grid-cols-[minmax(0,1.35fr)_minmax(360px,0.8fr)]">
         <Panel className="overflow-hidden">
-          <div className="flex flex-col gap-3 border-b border-cyan-200/10 bg-white/[0.025] p-5 sm:flex-row sm:items-center sm:justify-between">
+          <div className="flex flex-col gap-3 border-b border-cyan-200/10 bg-[radial-gradient(circle_at_0%_0%,rgba(25,216,255,0.12),transparent_34%)] p-5 sm:flex-row sm:items-center sm:justify-between">
             <div className="flex items-center gap-3">
-              <div className="hex-mark flex size-12 shrink-0 items-center justify-center bg-linear-to-br from-amber-300 to-amber-600 text-sm font-black text-amber-950 shadow-lg shadow-amber-400/20">
-                1
+              <div className="hex-mark relative flex size-13 shrink-0 items-center justify-center border border-cyan-300/22 bg-linear-to-br from-cyan-400/18 via-sky-500/12 to-violet-600/14 text-amber-300 shadow-xl shadow-cyan-500/12">
+                <span className="absolute inset-1 hex-mark border border-cyan-300/16 bg-black/18" />
+                <TrophyIcon className="relative size-7 drop-shadow-[0_0_10px_rgba(245,184,63,0.65)]" />
               </div>
               <div>
                 <h2 className="text-xl font-black text-white">Leaderboard Flex</h2>
@@ -224,9 +226,9 @@ export function DashboardView({ snapshot }: DashboardViewProps) {
 
           {sortedAccounts.length > 0 ? (
             <>
-              <div className="hidden overflow-x-auto p-4 md:block">
-                <table className="w-full min-w-[780px] border-separate border-spacing-0 overflow-hidden rounded-xl border border-cyan-200/10 text-left">
-                  <thead className="bg-black/22 text-xs uppercase tracking-[0.12em] text-slate-400">
+              <div className="hidden overflow-x-auto p-5 md:block">
+                <table className="w-full min-w-[780px] border-separate border-spacing-0 overflow-hidden rounded-xl border border-cyan-200/12 bg-[#071327]/72 text-left shadow-inner shadow-black/35">
+                  <thead className="bg-black/24 text-xs uppercase tracking-[0.12em] text-slate-400">
                     <tr>
                       <th className="px-5 py-4 font-black">Jugador</th>
                       <th className="px-5 py-4 font-black">Cuenta</th>
@@ -277,7 +279,7 @@ function StatTile({
 }: {
   accent: Accent;
   detail: string;
-  icon: string;
+  icon: StatIconName;
   label: string;
   value: string;
 }) {
@@ -293,14 +295,69 @@ function StatTile({
     >
       <div className="absolute inset-x-0 top-0 h-px bg-linear-to-r from-white/30 via-white/5 to-transparent" />
       <div className="flex items-start justify-between gap-3">
-        <dt className="text-xs font-black uppercase tracking-[0.14em] text-slate-400">{label}</dt>
-        <span className={cn("flex size-12 shrink-0 items-center justify-center rounded-xl border text-sm font-black shadow-lg", styles.icon)}>
-          {icon}
+        <dt className={cn("text-xs font-black uppercase tracking-[0.14em]", styles.text)}>{label}</dt>
+        <span className={cn("relative flex size-12 shrink-0 items-center justify-center rounded-xl border shadow-lg", styles.icon)}>
+          <span className="absolute inset-1 rounded-lg border border-white/10 bg-white/5" />
+          <StatIcon className="relative size-6 drop-shadow-[0_0_10px_currentColor]" name={icon} />
         </span>
       </div>
       <dd className="mt-3 text-4xl font-black tabular-nums text-white">{value}</dd>
       <p className="mt-1 text-sm font-medium text-slate-400">{detail}</p>
     </div>
+  );
+}
+
+function StatIcon({ className, name }: { className?: string; name: StatIconName }) {
+  const common = {
+    "aria-hidden": true,
+    className,
+    fill: "none",
+    stroke: "currentColor",
+    strokeLinecap: "round" as const,
+    strokeLinejoin: "round" as const,
+    strokeWidth: 2.15,
+    viewBox: "0 0 24 24",
+  };
+
+  if (name === "members") {
+    return (
+      <svg {...common}>
+        <path d="M8.5 11.25a3.15 3.15 0 1 0 0-6.3 3.15 3.15 0 0 0 0 6.3Z" />
+        <path d="M15.5 10.5a2.55 2.55 0 1 0 0-5.1" />
+        <path d="M3.25 19.05v-1.1c0-2.45 2.35-4.35 5.25-4.35s5.25 1.9 5.25 4.35v1.1" />
+        <path d="M14.5 13.9c2.7.25 4.25 1.95 4.25 4.05v1.1" />
+      </svg>
+    );
+  }
+
+  if (name === "accounts") {
+    return (
+      <svg {...common}>
+        <path d="M12 3.5 19 6.2v5.35c0 4.35-2.75 7.55-7 8.95-4.25-1.4-7-4.6-7-8.95V6.2l7-2.7Z" />
+        <path d="m9.25 12.2 2 2 4.15-4.55" />
+        <path d="M12 3.5v17" opacity="0.35" />
+      </svg>
+    );
+  }
+
+  if (name === "crown") {
+    return (
+      <svg {...common}>
+        <path d="M4.7 18.35h14.6" />
+        <path d="M6.05 16.15 4.75 8.2l4.2 3.2L12 5.35l3.05 6.05 4.2-3.2-1.3 7.95H6.05Z" />
+        <path d="M8.75 13.35h6.5" />
+        <path d="M12 5.35v3.15" opacity="0.55" />
+      </svg>
+    );
+  }
+
+  return (
+    <svg {...common}>
+      <path d="M4.25 6.75h15.5v10.5H4.25V6.75Z" />
+      <path d="m4.75 7.25 7.25 5.8 7.25-5.8" />
+      <path d="m9.6 11.15-4.85 5.6" opacity="0.55" />
+      <path d="m14.4 11.15 4.85 5.6" opacity="0.55" />
+    </svg>
   );
 }
 
@@ -332,7 +389,7 @@ function LeaderboardRow({ account, index }: { account: AccountWithMember; index:
         <MemberIdentity member={account.member} rank={index + 1} />
       </td>
       <td className="border-b border-cyan-200/10 px-5 py-4">
-        <AccountIdentity account={account} />
+        <LeaderboardAccountIdentity account={account} />
       </td>
       <td className="border-b border-cyan-200/10 px-5 py-4">
         <RankBadge account={account} />
@@ -372,7 +429,7 @@ function LeaderboardCard({ account, index }: { account: AccountWithMember; index
         <RankBadge account={account} />
       </div>
       <div className="mt-4">
-        <AccountIdentity account={account} />
+        <LeaderboardAccountIdentity account={account} />
       </div>
       <div className="mt-4 grid grid-cols-2 gap-3">
         <MetricPill label="LP" value={account.lp.toString()} />
@@ -388,26 +445,51 @@ function LeaderboardCard({ account, index }: { account: AccountWithMember; index
 function MemberIdentity({ member, rank }: { member: GroupMember; rank: number }) {
   const badgeStyle =
     rank === 1
-      ? "bg-linear-to-br from-amber-300 to-amber-600 text-amber-950 border-amber-200/60 shadow-amber-400/35"
+      ? "bg-linear-to-br from-amber-300 via-amber-400 to-amber-700 text-amber-950 border-amber-100/70 shadow-amber-400/40"
       : rank === 2
-        ? "bg-linear-to-br from-slate-100 to-slate-500 text-slate-950 border-slate-200/50 shadow-slate-300/22"
+        ? "bg-linear-to-br from-slate-100 via-slate-300 to-slate-600 text-slate-950 border-slate-100/55 shadow-slate-300/28"
         : rank === 3
-          ? "bg-linear-to-br from-orange-400 to-orange-800 text-orange-50 border-orange-300/40 shadow-orange-500/25"
-          : "border-slate-500/30 bg-slate-900/70 text-slate-300 shadow-black/20";
+          ? "bg-linear-to-br from-orange-300 via-orange-500 to-orange-900 text-orange-50 border-orange-200/45 shadow-orange-500/30"
+          : "border-slate-500/34 bg-linear-to-br from-slate-700/80 to-slate-950 text-slate-300 shadow-black/25";
 
   return (
-    <div className="flex min-w-0 items-center gap-3">
+    <div className="flex min-w-0 items-center gap-3.5">
       <div
         className={cn(
-          "hex-mark flex size-12 shrink-0 items-center justify-center border text-base font-black shadow-lg",
+          "hex-mark relative flex size-12 shrink-0 items-center justify-center border text-base font-black shadow-lg",
           badgeStyle,
         )}
       >
-        {rank}
+        <span className="absolute inset-1 hex-mark border border-white/18 bg-black/8" />
+        <span className="relative">{rank}</span>
+      </div>
+      <div className="shrink-0">
+        <PlayerCrest rank={rank} />
       </div>
       <div className="min-w-0">
         <div className="truncate font-black text-white">{member.name}</div>
         <div className="mt-0.5 truncate text-xs font-medium text-slate-400">{formatRole(member.role)}</div>
+      </div>
+    </div>
+  );
+}
+
+function LeaderboardAccountIdentity({ account }: { account: AccountWithMember }) {
+  return (
+    <div className="min-w-0">
+      <div className="truncate font-black text-white">
+        {account.summonerName}
+        <span className="text-slate-400">#{account.tagLine}</span>
+      </div>
+      <div className="mt-1 flex flex-wrap items-center gap-2 text-xs font-medium text-slate-400">
+        <span>{account.region}</span>
+        <span aria-hidden="true">/</span>
+        <span>{account.isMain ? "Main" : "Smurf"}</span>
+      </div>
+      <div className="mt-2">
+        <Badge tone={statusTone[account.leagueOfGraphsStatus]}>
+          {statusLabel[account.leagueOfGraphsStatus]}
+        </Badge>
       </div>
     </div>
   );
@@ -433,6 +515,64 @@ function AccountIdentity({ account }: { account: AccountWithMember }) {
           </Badge>
         </div>
       </div>
+    </div>
+  );
+}
+
+function TrophyIcon({ className }: { className?: string }) {
+  return (
+    <svg
+      aria-hidden="true"
+      className={className}
+      fill="none"
+      stroke="currentColor"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      strokeWidth="2.1"
+      viewBox="0 0 24 24"
+    >
+      <path d="M8 5.25h8v4.4c0 2.35-1.55 4.3-4 4.3s-4-1.95-4-4.3v-4.4Z" />
+      <path d="M8 7H5.5v1.75c0 1.8 1.15 3.2 3 3.45" />
+      <path d="M16 7h2.5v1.75c0 1.8-1.15 3.2-3 3.45" />
+      <path d="M12 13.95v3.15" />
+      <path d="M8.75 18.75h6.5" />
+    </svg>
+  );
+}
+
+function PlayerCrest({ rank }: { rank: number }) {
+  const tone =
+    rank === 1
+      ? "from-cyan-300 to-indigo text-cyan-100 shadow-cyan-400/25"
+      : rank === 2
+        ? "from-slate-300 to-sky-700 text-slate-100 shadow-slate-300/18"
+        : rank === 3
+          ? "from-cyan-300 to-violet-700 text-cyan-100 shadow-violet-400/20"
+          : "from-slate-500 to-slate-900 text-slate-300 shadow-black/25";
+
+  return (
+    <div
+      className={cn(
+        "relative flex size-11 items-center justify-center rounded-xl border border-cyan-200/14 bg-linear-to-br shadow-lg",
+        tone,
+      )}
+    >
+      <span className="absolute inset-1 rounded-lg border border-white/12 bg-black/24" />
+      <svg
+        aria-hidden="true"
+        className="relative size-7 drop-shadow-[0_0_8px_currentColor]"
+        fill="none"
+        stroke="currentColor"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        strokeWidth="1.8"
+        viewBox="0 0 24 24"
+      >
+        <path d="M12 3.4 17.8 7v5.1c0 3.4-2.25 6.15-5.8 8.1-3.55-1.95-5.8-4.7-5.8-8.1V7L12 3.4Z" />
+        <path d="M12 6.5v10.2" />
+        <path d="m8.6 10.1 3.4-2.05 3.4 2.05" />
+        <path d="m8.8 13.3 3.2 2 3.2-2" />
+      </svg>
     </div>
   );
 }
