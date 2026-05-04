@@ -1,6 +1,7 @@
 import type { ReactNode } from "react";
 import { AddAccountProvider, AddAccountTrigger } from "@/features/accounts/components/add-account-dialog";
 import { ManageAccountDialog } from "@/features/accounts/components/manage-account-dialog";
+import { DashboardBackgroundSync } from "@/features/accounts/components/dashboard-background-sync";
 import { SyncAllAccountsButton } from "@/features/accounts/components/sync-all-accounts-button";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -264,6 +265,7 @@ export function DashboardView({ snapshot }: DashboardViewProps) {
         </Panel>
       </section>
     </div>
+    <DashboardBackgroundSync groupId={snapshot.group.id} />
     </AddAccountProvider>
   );
 }

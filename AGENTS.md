@@ -78,7 +78,7 @@
 ## Integraciones futuras
 
 - Scraping de League of Graphs debe aislarse detras de servicios/adaptadores y no contaminar componentes React.
-- Vercel Cron Jobs se reservara para sincronizacion periodica de rankings, cuentas y metricas.
+- La sincronizacion con Riot se dispara desde la app: boton «Sincronizar todo» y un intervalo en el dashboard (`DashboardBackgroundSync`, cada 5 minutos por defecto, sobreescribible con `NEXT_PUBLIC_DASHBOARD_RIOT_SYNC_MINUTES`) solo mientras la pestana esta abierta; sin cron en repo.
 - La metrica "Posicion Promedio" debe tener tipos explicitos y documentacion de formula antes de exponerla como dato real.
 
 ## Reglas para agentes de codigo

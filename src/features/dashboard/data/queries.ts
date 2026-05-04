@@ -173,9 +173,5 @@ export async function getDashboardSnapshot(): Promise<DashboardSnapshot | null> 
     invites,
     viewerInviteAdmin: Boolean(memberRecord.invite_admin),
     viewerIsOwner: memberRecord.role === "owner",
-    sync: {
-      lastUpdatedAt: new Date().toISOString(),
-      nextJobLabel: "Cron job deshabilitado (v1)",
-    },
   };
 }

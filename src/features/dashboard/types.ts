@@ -56,8 +56,4 @@ export type DashboardSnapshot = {
   viewerInviteAdmin: boolean;
   /** Owner del grupo: puede renombrar el squad en el hero del dashboard. */
   viewerIsOwner: boolean;
-  sync: {
-    lastUpdatedAt: string;
-    nextJobLabel: string;
-  };
 };
