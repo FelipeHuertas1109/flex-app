@@ -15,7 +15,12 @@ async function syncRiotAccountById(
     return { ok: false as const, error: "No se pudo consultar Riot API." };
   }
 
-  const adminSupabase = createAdminClient();
+  let adminSupabase;
+  try {
+    adminSupabase = createAdminClient();
+  } catch {
+    return { ok: false as const, error: "Falta SUPABASE_SERVICE_ROLE_KEY en el servidor." };
+  }
   const { error } = await adminSupabase
     .from("riot_accounts")
     .update({
@@ -247,7 +252,13 @@ export async function updateAccount(groupAccountId: string, formData: FormData) 
 
   if (!ownerMembership) return { error: "El dueno debe pertenecer al grupo" };
 
-  const adminSupabase = createAdminClient();
+  let adminSupabase;
+  try {
+    adminSupabase = createAdminClient();
+  } catch {
+    return { error: "Falta SUPABASE_SERVICE_ROLE_KEY en el servidor." };
+  }
+
   const { error } = await adminSupabase
     .from("group_accounts")
     .update({
@@ -270,7 +281,13 @@ export async function deleteAccount(groupAccountId: string) {
   if ("error" in authCheck) return { error: authCheck.error };
   const { groupAccount } = authCheck;
 
-  const adminSupabase = createAdminClient();
+  let adminSupabase;
+  try {
+    adminSupabase = createAdminClient();
+  } catch {
+    return { error: "Falta SUPABASE_SERVICE_ROLE_KEY en el servidor." };
+  }
+
   const { error } = await adminSupabase
     .from("group_accounts")
     .delete()

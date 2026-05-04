@@ -126,25 +126,32 @@ export async function getDashboardSnapshot(): Promise<DashboardSnapshot | null> 
   const members: GroupMember[] = memberRows.map((m) => {
     const memberAccountsData = accountRows.filter((acc) => acc.user_id === m.profiles.id);
 
-    const accounts: LeagueAccount[] = memberAccountsData.map((acc) => {
-      const riot = acc.riot_accounts;
+    const accounts: LeagueAccount[] = memberAccountsData.flatMap((acc) => {
+      const riotRaw = acc.riot_accounts as RiotAccountRow | RiotAccountRow[] | null | undefined;
+      const riot = Array.isArray(riotRaw) ? riotRaw[0] : riotRaw;
+      if (!riot?.game_name) {
+        return [];
+      }
+
       const fromPlatform = routingPlatformToRegionLabel(riot.routing_platform);
       const fromTag = inferRegionFromTagLine(riot.tag_line ?? "");
-      return {
-        id: acc.id,
-        customName: acc.custom_name || null,
-        summonerName: riot.game_name,
-        tagLine: riot.tag_line,
-        region: fromPlatform || fromTag,
-        accountUser: acc.credential_user ?? null,
-        accountPsw: acc.credential_psw ?? null,
-        isMain: acc.custom_name?.toLowerCase() === "main",
-        tier: toRankTier(riot.tier || undefined),
-        division: normalizeDivision(riot.rank),
-        lp: riot.lp ?? 0,
-        winRate: numericOrZero(riot.win_rate),
-        leagueOfGraphsStatus: riot.last_synced_at ? "synced" : "pending",
-      };
+      return [
+        {
+          id: acc.id,
+          customName: acc.custom_name || null,
+          summonerName: riot.game_name,
+          tagLine: riot.tag_line,
+          region: fromPlatform || fromTag,
+          accountUser: acc.credential_user ?? null,
+          accountPsw: acc.credential_psw ?? null,
+          isMain: acc.custom_name?.toLowerCase() === "main",
+          tier: toRankTier(riot.tier || undefined),
+          division: normalizeDivision(riot.rank),
+          lp: riot.lp ?? 0,
+          winRate: numericOrZero(riot.win_rate),
+          leagueOfGraphsStatus: riot.last_synced_at ? "synced" : "pending",
+        },
+      ];
     });
 
     return {
