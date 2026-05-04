@@ -9,9 +9,9 @@ type ButtonProps = ButtonHTMLAttributes<HTMLButtonElement> & {
 
 const variants: Record<ButtonVariant, string> = {
   primary:
-    "bg-foreground text-white shadow-sm shadow-black/10 hover:-translate-y-0.5 hover:bg-ink-soft hover:shadow-md hover:shadow-teal/15 active:translate-y-0 focus-visible:outline-ring",
+    "bg-linear-to-r from-teal to-indigo text-white shadow-md shadow-teal/25 hover:-translate-y-0.5 hover:shadow-lg hover:shadow-teal/35 active:translate-y-0 focus-visible:outline-ring",
   secondary:
-    "border border-border bg-surface/90 text-foreground shadow-sm shadow-black/[0.03] hover:-translate-y-0.5 hover:border-teal/50 hover:bg-teal-soft/60 hover:shadow-md hover:shadow-teal/10 active:translate-y-0 focus-visible:outline-ring",
+    "border border-border bg-surface text-foreground shadow-sm shadow-black/5 hover:-translate-y-0.5 hover:border-teal/45 hover:bg-teal-soft/40 hover:shadow-md hover:shadow-teal/10 active:translate-y-0 focus-visible:outline-ring",
   ghost:
     "text-muted hover:bg-surface-muted hover:text-foreground active:bg-border/60 focus-visible:outline-ring",
 };

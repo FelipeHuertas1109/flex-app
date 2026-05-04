@@ -48,30 +48,30 @@ const accentStyles: Record<
   }
 > = {
   teal: {
-    border: "border-teal/20",
-    glow: "from-teal-soft/85 to-white",
-    icon: "bg-teal-soft text-teal",
+    border: "border-teal/25",
+    glow: "from-teal-soft/70 to-surface",
+    icon: "bg-teal/10 text-teal ring-1 ring-teal/20",
     meter: "from-teal to-indigo",
     text: "text-teal",
   },
   indigo: {
-    border: "border-indigo/20",
-    glow: "from-indigo-soft/85 to-white",
-    icon: "bg-indigo-soft text-indigo",
+    border: "border-indigo/25",
+    glow: "from-indigo-soft/70 to-surface",
+    icon: "bg-indigo/10 text-indigo ring-1 ring-indigo/20",
     meter: "from-indigo to-teal",
     text: "text-indigo",
   },
   gold: {
-    border: "border-gold/25",
-    glow: "from-gold-soft/90 to-white",
-    icon: "bg-gold-soft text-gold",
+    border: "border-gold/30",
+    glow: "from-gold-soft/80 to-surface",
+    icon: "bg-gold-soft text-gold ring-1 ring-gold/20",
     meter: "from-gold to-teal",
     text: "text-gold",
   },
   danger: {
-    border: "border-danger/20",
-    glow: "from-danger-soft/75 to-white",
-    icon: "bg-danger-soft text-danger",
+    border: "border-danger/25",
+    glow: "from-danger-soft/70 to-surface",
+    icon: "bg-danger/10 text-danger ring-1 ring-danger/20",
     meter: "from-danger to-gold",
     text: "text-danger",
   },
@@ -92,11 +92,12 @@ export function DashboardView({ snapshot }: DashboardViewProps) {
   ).length;
 
   return (
-    <div className="animate-enter space-y-6">
+    <div className="animate-enter space-y-5">
       <section className="grid gap-4 lg:grid-cols-[minmax(0,1.55fr)_minmax(320px,0.8fr)]">
-        <div className="relative overflow-hidden rounded-lg border border-border/80 bg-surface/95 p-5 shadow-lg shadow-teal/5 sm:p-6">
-          <div className="absolute inset-x-0 top-0 h-1 bg-[linear-gradient(90deg,var(--teal),var(--indigo),var(--gold))]" />
-          <div className="absolute right-0 top-0 h-36 w-1/2 bg-[radial-gradient(circle_at_top_right,rgba(15,139,127,0.16),transparent_70%)]" />
+        <div className="relative overflow-hidden rounded-lg border border-border/70 bg-surface shadow-lg shadow-black/6 ring-1 ring-black/2 sm:p-6 p-5">
+          <div className="absolute inset-x-0 top-0 h-[3px] bg-linear-to-r from-teal via-indigo to-gold" />
+          <div className="absolute right-0 top-0 h-48 w-2/3 bg-[radial-gradient(ellipse_at_top_right,rgba(8,145,178,0.10),transparent_65%)]" />
+          <div className="absolute right-0 bottom-0 h-32 w-1/2 bg-[radial-gradient(ellipse_at_bottom_right,rgba(79,70,229,0.06),transparent_70%)]" />
 
           <div className="relative flex flex-col gap-5 md:flex-row md:items-start md:justify-between">
             <div className="max-w-2xl">
@@ -104,7 +105,7 @@ export function DashboardView({ snapshot }: DashboardViewProps) {
                 <Badge tone="teal">Grupo privado</Badge>
                 <Badge tone="gold">Flex queue</Badge>
               </div>
-              <h1 className="mt-4 max-w-2xl text-3xl font-black tracking-normal text-foreground sm:text-4xl">
+              <h1 className="mt-4 max-w-2xl text-3xl font-black tracking-tight text-foreground sm:text-4xl">
                 {snapshot.group.name}
               </h1>
               <p className="mt-3 max-w-xl text-sm leading-6 text-muted sm:text-base">
@@ -151,26 +152,26 @@ export function DashboardView({ snapshot }: DashboardViewProps) {
         </div>
 
         <Panel className="overflow-hidden">
-          <div className="border-b border-border/80 bg-[linear-gradient(135deg,rgba(229,232,255,0.72),rgba(255,255,255,0.92))] p-5">
+          <div className="border-b border-border/70 bg-linear-to-br from-indigo-soft/60 to-surface p-5">
             <div className="flex items-start justify-between gap-3">
               <div>
                 <h2 className="text-base font-bold text-foreground">Sincronizacion</h2>
-                <p className="mt-1 text-sm leading-6 text-muted">
+                <p className="mt-1 text-sm leading-5 text-muted">
                   Preparado para cron jobs y scraping aislado de League of Graphs.
                 </p>
               </div>
               <Badge tone="indigo">Futuro</Badge>
             </div>
-            <div className="mt-4 rounded-lg border border-indigo/12 bg-white/70 p-3">
+            <div className="mt-4 rounded-lg border border-indigo/15 bg-white/70 p-3">
               <div className="flex items-center justify-between gap-3">
-                <span className="text-xs font-semibold uppercase text-muted">Cobertura mock</span>
-                <span className="font-mono text-sm font-bold text-foreground">
+                <span className="text-xs font-bold uppercase tracking-wide text-muted">Cobertura mock</span>
+                <span className="font-mono text-sm font-black text-foreground">
                   {syncedAccounts}/{accounts.length}
                 </span>
               </div>
-              <div className="mt-2 h-2 overflow-hidden rounded-full bg-indigo-soft">
+              <div className="mt-2.5 h-1.5 overflow-hidden rounded-full bg-indigo-soft">
                 <div
-                  className="h-full rounded-full bg-[linear-gradient(90deg,var(--teal),var(--indigo))]"
+                  className="h-full rounded-full bg-linear-to-r from-teal to-indigo transition-all duration-700"
                   style={{ width: `${accounts.length ? (syncedAccounts / accounts.length) * 100 : 0}%` }}
                 />
               </div>
@@ -186,10 +187,10 @@ export function DashboardView({ snapshot }: DashboardViewProps) {
 
       <section className="grid gap-4 xl:grid-cols-[minmax(0,1.35fr)_minmax(340px,0.8fr)]">
         <Panel className="overflow-hidden">
-          <div className="flex flex-col gap-3 border-b border-border/80 bg-surface/80 p-5 sm:flex-row sm:items-center sm:justify-between">
+          <div className="flex flex-col gap-3 border-b border-border/70 bg-surface-muted/50 p-5 sm:flex-row sm:items-center sm:justify-between">
             <div>
               <h2 className="text-lg font-black text-foreground">Leaderboard Flex</h2>
-              <p className="mt-1 text-sm text-muted">Ordenado por Posicion Promedio mock.</p>
+              <p className="mt-0.5 text-sm text-muted">Ordenado por Posicion Promedio mock.</p>
             </div>
             <Badge tone="gold" className="self-start">
               Top del grupo
@@ -200,7 +201,7 @@ export function DashboardView({ snapshot }: DashboardViewProps) {
             <>
               <div className="hidden overflow-x-auto md:block">
                 <table className="w-full min-w-[760px] border-separate border-spacing-0 text-left">
-                  <thead className="bg-surface-muted/75 text-xs uppercase text-muted">
+                  <thead className="bg-foreground/3 text-xs uppercase tracking-wide text-muted">
                     <tr>
                       <th className="px-5 py-3 font-bold">Jugador</th>
                       <th className="px-5 py-3 font-bold">Cuenta</th>
@@ -260,18 +261,18 @@ function StatTile({
   return (
     <div
       className={cn(
-        "rounded-lg border bg-gradient-to-br p-4 shadow-sm shadow-black/[0.03]",
+        "rounded-lg border bg-linear-to-br p-4 shadow-sm transition-shadow duration-200 hover:shadow-md",
         styles.border,
         styles.glow,
       )}
     >
       <div className="flex items-start justify-between gap-3">
-        <dt className="text-xs font-bold uppercase text-muted">{label}</dt>
-        <span className={cn("flex size-8 items-center justify-center rounded-md text-xs font-black", styles.icon)}>
+        <dt className="text-xs font-bold uppercase tracking-wide text-muted">{label}</dt>
+        <span className={cn("flex size-9 shrink-0 items-center justify-center rounded-lg text-xs font-black", styles.icon)}>
           {icon}
         </span>
       </div>
-      <dd className="mt-3 text-3xl font-black text-foreground">{value}</dd>
+      <dd className="mt-3 text-3xl font-black tabular-nums text-foreground">{value}</dd>
       <p className="mt-1 text-xs font-medium text-muted">{detail}</p>
     </div>
   );
@@ -279,9 +280,9 @@ function StatTile({
 
 function TimelineRow({ label, value }: { label: string; value: string }) {
   return (
-    <div className="flex items-start justify-between gap-4 border-t border-border/80 py-3 first:border-t-0 first:pt-0 last:pb-0">
+    <div className="flex items-start justify-between gap-4 border-t border-border/70 py-3 first:border-t-0 first:pt-0 last:pb-0">
       <span className="text-sm text-muted">{label}</span>
-      <span className="max-w-[12rem] text-right text-sm font-semibold text-foreground">{value}</span>
+      <span className="max-w-48 text-right text-sm font-semibold text-foreground">{value}</span>
     </div>
   );
 }
@@ -290,26 +291,28 @@ function LeaderboardRow({ account, index }: { account: AccountWithMember; index:
   return (
     <tr
       className={cn(
-        "group transition duration-200 hover:bg-teal-soft/25",
-        index < 3 && "bg-[linear-gradient(90deg,rgba(247,236,211,0.48),transparent_42%)]",
+        "group transition duration-150 hover:bg-teal/5",
+        index === 0 && "bg-[linear-gradient(90deg,rgba(251,191,36,0.09),rgba(245,158,11,0.04)_45%,transparent)]",
+        index === 1 && "bg-[linear-gradient(90deg,rgba(148,163,184,0.09),rgba(100,116,139,0.04)_45%,transparent)]",
+        index === 2 && "bg-[linear-gradient(90deg,rgba(180,83,9,0.08),rgba(146,64,14,0.04)_45%,transparent)]",
       )}
     >
-      <td className="border-b border-border/70 px-5 py-4">
+      <td className="border-b border-border/60 px-5 py-4">
         <MemberIdentity member={account.member} rank={index + 1} />
       </td>
-      <td className="border-b border-border/70 px-5 py-4">
+      <td className="border-b border-border/60 px-5 py-4">
         <AccountIdentity account={account} />
       </td>
-      <td className="border-b border-border/70 px-5 py-4">
+      <td className="border-b border-border/60 px-5 py-4">
         <RankBadge account={account} />
       </td>
-      <td className="border-b border-border/70 px-5 py-4 font-mono text-sm font-bold text-foreground">
+      <td className="border-b border-border/60 px-5 py-4 font-mono text-sm font-bold text-foreground">
         {account.lp}
       </td>
-      <td className="border-b border-border/70 px-5 py-4 text-sm font-semibold text-foreground">
+      <td className="border-b border-border/60 px-5 py-4 text-sm font-semibold text-foreground">
         {account.winRate}%
       </td>
-      <td className="border-b border-border/70 px-5 py-4">
+      <td className="border-b border-border/60 px-5 py-4">
         <PerformanceMeter value={account.averagePosition} />
       </td>
     </tr>
@@ -317,11 +320,20 @@ function LeaderboardRow({ account, index }: { account: AccountWithMember; index:
 }
 
 function LeaderboardCard({ account, index }: { account: AccountWithMember; index: number }) {
+  const cardStyle =
+    index === 0
+      ? "border-amber-300/45 bg-linear-to-br from-amber-50 to-surface shadow-amber-100/60"
+      : index === 1
+        ? "border-slate-300/50 bg-linear-to-br from-slate-50 to-surface"
+        : index === 2
+          ? "border-amber-700/30 bg-linear-to-br from-amber-50/60 to-surface"
+          : "border-border/70 bg-surface";
+
   return (
     <article
       className={cn(
-        "rounded-lg border border-border/80 bg-white/90 p-4 shadow-sm shadow-black/[0.03]",
-        index < 3 && "border-gold/30 bg-[linear-gradient(135deg,rgba(247,236,211,0.76),rgba(255,255,255,0.92))]",
+        "rounded-lg border p-4 shadow-sm",
+        cardStyle,
       )}
     >
       <div className="flex items-start justify-between gap-3">
@@ -343,23 +355,28 @@ function LeaderboardCard({ account, index }: { account: AccountWithMember; index
 }
 
 function MemberIdentity({ member, rank }: { member: GroupMember; rank: number }) {
-  const topRank = rank <= 3;
+  const badgeStyle =
+    rank === 1
+      ? "bg-linear-to-br from-amber-300 to-amber-500 text-amber-900 border-amber-300/60 shadow-lg shadow-amber-200/50"
+      : rank === 2
+        ? "bg-linear-to-br from-slate-200 to-slate-400 text-slate-700 border-slate-300/60 shadow-md shadow-slate-200/40"
+        : rank === 3
+          ? "bg-linear-to-br from-amber-600 to-amber-800 text-amber-100 border-amber-600/60 shadow-md shadow-amber-700/25"
+          : "border-border bg-surface-muted text-muted";
 
   return (
     <div className="flex min-w-0 items-center gap-3">
       <div
         className={cn(
-          "flex size-10 shrink-0 items-center justify-center rounded-lg border text-sm font-black shadow-sm",
-          topRank
-            ? "border-gold/30 bg-gold-soft text-gold shadow-gold/10"
-            : "border-border bg-surface-muted text-muted",
+          "flex size-10 shrink-0 items-center justify-center rounded-lg border text-sm font-black",
+          badgeStyle,
         )}
       >
         {rank}
       </div>
       <div className="min-w-0">
         <div className="truncate font-semibold text-foreground">{member.name}</div>
-        <div className="mt-1 truncate text-xs text-muted">{formatRole(member.role)}</div>
+        <div className="mt-0.5 truncate text-xs text-muted">{formatRole(member.role)}</div>
       </div>
     </div>
   );
@@ -393,12 +410,12 @@ function PerformanceMeter({ value }: { value: number }) {
 
   return (
     <div className="min-w-40">
-      <div className="flex items-center justify-between gap-3">
-        <span className={cn("font-mono text-sm font-black", styles.text)}>{value.toFixed(1)}</span>
+      <div className="flex items-center gap-3">
+        <span className={cn("font-mono text-base font-black tabular-nums", styles.text)}>{value.toFixed(1)}</span>
         <span className="text-xs text-muted">/ 10</span>
       </div>
-      <div className="mt-2 h-2.5 overflow-hidden rounded-full bg-surface-muted ring-1 ring-border/60">
-        <div className={cn("h-full rounded-full bg-gradient-to-r", styles.meter)} style={{ width }} />
+      <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-border/60">
+        <div className={cn("h-full rounded-full bg-linear-to-r transition-all duration-500", styles.meter)} style={{ width }} />
       </div>
     </div>
   );
@@ -406,9 +423,9 @@ function PerformanceMeter({ value }: { value: number }) {
 
 function MetricPill({ label, value }: { label: string; value: string }) {
   return (
-    <div className="rounded-md border border-border/80 bg-surface/80 px-3 py-2">
+    <div className="rounded-md border border-border/70 bg-surface-muted/60 px-3 py-2">
       <p className="text-xs font-semibold text-muted">{label}</p>
-      <p className="mt-1 font-mono text-sm font-black text-foreground">{value}</p>
+      <p className="mt-0.5 font-mono text-sm font-black text-foreground">{value}</p>
     </div>
   );
 }
@@ -418,35 +435,35 @@ function AccountsPanel({ accounts }: { accounts: AccountWithMember[] }) {
     <Panel className="p-5">
       <div className="flex items-start justify-between gap-3">
         <div>
-          <h2 className="text-lg font-black text-foreground">Cuentas registradas</h2>
-          <p className="mt-1 text-sm text-muted">Vista rapida por dueno, estado y rol.</p>
+          <h2 className="text-base font-black text-foreground">Cuentas registradas</h2>
+          <p className="mt-0.5 text-xs text-muted">Vista rapida por dueno, estado y rol.</p>
         </div>
         <Badge tone="neutral">{accounts.length}</Badge>
       </div>
 
       {accounts.length > 0 ? (
-        <div className="mt-5 grid gap-3">
+        <div className="mt-4 grid gap-3">
           {accounts.map((account) => (
             <article
-              className="group rounded-lg border border-border/80 bg-white/75 p-4 transition duration-200 hover:-translate-y-0.5 hover:border-teal/30 hover:shadow-md hover:shadow-teal/10"
+              className="group rounded-lg border border-border/70 bg-surface p-4 transition-all duration-200 hover:-translate-y-0.5 hover:border-teal/35 hover:shadow-lg hover:shadow-teal/8"
               key={account.id}
             >
               <div className="flex items-start justify-between gap-3">
                 <AccountIdentity account={account} />
                 <Badge tone={account.isMain ? "indigo" : "neutral"}>{account.isMain ? "Main" : "Smurf"}</Badge>
               </div>
-              <div className="mt-4 flex items-center justify-between gap-3 border-t border-border/70 pt-3">
+              <div className="mt-4 flex items-center justify-between gap-3 border-t border-border/60 pt-3">
                 <div className="min-w-0">
-                  <p className="truncate text-xs font-semibold uppercase text-muted">Dueno</p>
-                  <p className="mt-1 truncate text-sm font-semibold text-foreground">
+                  <p className="truncate text-xs font-bold uppercase tracking-wide text-muted">Dueno</p>
+                  <p className="mt-0.5 truncate text-sm font-semibold text-foreground">
                     {account.member.name} · {formatRole(account.member.role)}
                   </p>
                 </div>
-                <Button className="h-8 px-3" variant="ghost">
+                <Button className="h-7 px-3 text-xs" variant="ghost">
                   Ver
                 </Button>
               </div>
-              <p className="mt-3 text-xs leading-5 text-muted">{statusDetail[account.leagueOfGraphsStatus]}</p>
+              <p className="mt-2.5 text-xs leading-5 text-muted">{statusDetail[account.leagueOfGraphsStatus]}</p>
             </article>
           ))}
         </div>
@@ -466,20 +483,30 @@ function MembersPanel({ members }: { members: GroupMember[] }) {
     <Panel className="p-5">
       <div className="flex items-start justify-between gap-3">
         <div>
-          <h2 className="text-lg font-black text-foreground">Miembros</h2>
-          <p className="mt-1 text-sm text-muted">Cuentas asociadas por persona.</p>
+          <h2 className="text-base font-black text-foreground">Miembros</h2>
+          <p className="mt-0.5 text-xs text-muted">Cuentas asociadas por persona.</p>
         </div>
         <Badge tone="neutral">{members.length}</Badge>
       </div>
-      <div className="mt-5 divide-y divide-border/80">
+      <div className="mt-4 divide-y divide-border/70">
         {members.map((member) => (
           <div
-            className="flex items-center justify-between gap-4 py-3 first:pt-0 last:pb-0"
+            className="flex items-center justify-between gap-3 py-3 first:pt-0 last:pb-0"
             key={member.id}
           >
-            <div className="min-w-0">
-              <p className="truncate text-sm font-semibold text-foreground">{member.name}</p>
-              <p className="mt-1 truncate text-xs text-muted">{member.email}</p>
+            <div className="flex min-w-0 items-center gap-2.5">
+              <div
+                className={cn(
+                  "flex size-7 shrink-0 items-center justify-center rounded-md text-xs font-black",
+                  member.role === "owner" ? "bg-indigo/10 text-indigo ring-1 ring-indigo/15" : "bg-surface-muted text-muted",
+                )}
+              >
+                {member.name[0]}
+              </div>
+              <div className="min-w-0">
+                <p className="truncate text-sm font-semibold text-foreground">{member.name}</p>
+                <p className="truncate text-xs text-muted">{member.email}</p>
+              </div>
             </div>
             <Badge tone={member.role === "owner" ? "indigo" : "neutral"}>
               {member.accounts.length} cuentas
@@ -498,16 +525,16 @@ function InvitesPanel({ snapshot }: { snapshot: DashboardSnapshot }) {
     <Panel className="p-5">
       <div className="flex items-start justify-between gap-3">
         <div>
-          <h2 className="text-lg font-black text-foreground">Invitaciones</h2>
-          <p className="mt-1 text-sm text-muted">Invita amigos y completa el grupo.</p>
+          <h2 className="text-base font-black text-foreground">Invitaciones</h2>
+          <p className="mt-0.5 text-xs text-muted">Invita amigos y completa el grupo.</p>
         </div>
-        <Button className="h-9 px-3" variant="secondary">
+        <Button className="h-8 px-3 text-xs" variant="secondary">
           Nueva
         </Button>
       </div>
 
       {pendingInvites.length > 0 ? (
-        <div className="mt-5 divide-y divide-border/80">
+        <div className="mt-4 divide-y divide-border/70">
           {pendingInvites.map((invite) => (
             <div
               className="flex items-center justify-between gap-4 py-3 first:pt-0 last:pb-0"
@@ -541,13 +568,13 @@ function EmptyState({
   title: string;
 }) {
   return (
-    <div className="m-4 rounded-lg border border-dashed border-teal/30 bg-teal-soft/30 p-5 text-center">
-      <div className="mx-auto flex size-10 items-center justify-center rounded-lg bg-white text-sm font-black text-teal shadow-sm">
-        +
+    <div className="my-2 rounded-lg border border-dashed border-teal/35 bg-linear-to-b from-teal-soft/25 to-transparent p-7 text-center">
+      <div className="mx-auto flex size-11 items-center justify-center rounded-lg bg-teal/10 text-lg font-black text-teal ring-1 ring-teal/20">
+        ⊕
       </div>
-      <h3 className="mt-3 text-sm font-black text-foreground">{title}</h3>
-      <p className="mx-auto mt-2 max-w-sm text-sm leading-6 text-muted">{description}</p>
-      <Button className="mt-4 h-9 px-3" variant="secondary">
+      <h3 className="mt-3.5 text-sm font-bold text-foreground">{title}</h3>
+      <p className="mx-auto mt-2 max-w-xs text-sm leading-6 text-muted">{description}</p>
+      <Button className="mt-5 h-9 px-4 text-sm" variant="secondary">
         {action}
       </Button>
     </div>

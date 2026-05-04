@@ -1,13 +1,7 @@
-<!-- BEGIN:nextjs-agent-rules -->
-# This is NOT the Next.js you know
+## Stack
 
-This version has breaking changes — APIs, conventions, and file structure may all differ from your training data. Read the relevant guide in `node_modules/next/dist/docs/` before writing any code. Heed deprecation notices.
-<!-- END:nextjs-agent-rules -->
-
-## Estado de la documentacion local
-
-- La regla anterior es obligatoria. Si `node_modules/next/dist/docs/` no existe, se debe dejar constancia en el cambio y trabajar de forma conservadora con las convenciones verificables del repositorio.
 - Este proyecto usa Next.js 16, React 19, TypeScript estricto y Tailwind CSS 4 via `@tailwindcss/postcss`.
+- Las APIs y convenciones de Next pueden diferir del material de entrenamiento; contrastar con el codigo del repo y la [documentacion oficial de Next.js](https://nextjs.org/docs) cuando haga falta.
 
 ## Arquitectura frontend
 
@@ -94,3 +88,59 @@ This version has breaking changes — APIs, conventions, and file structure may 
 - Documentar aqui decisiones nuevas que afecten arquitectura, convenciones o integraciones.
 - No introducir dependencias sin justificar el valor y revisar primero si el stack actual resuelve el caso.
 - Evitar sobreingenieria: no crear capas, stores globales, factories ni patrones complejos hasta que el producto los necesite.
+
+## Decisiones visuales — Mayo 2026
+
+### Paleta de colores actualizada
+- **Fondo**: migrado de verde-grisaceo (`#f4f7f4`) a azul-gris frio (`#edf2f7`). Refuerza identidad gaming y aleja de look "nature/eco".
+- **Foreground**: `#0d1520` (navy-negro con tinte azul, antes verde-negro).
+- **Teal**: `#0891b2` (cyan-teal vibrante, antes teal forestal `#0f8b7f`). Mas alineado con la UI de LoL.
+- **Indigo**: `#4f46e5` (violeta-indigo profundo, antes azul-indigo suave `#4656b0`).
+- **Gold**: `#b45309` (ambar rico, antes dorado apagado `#ad7a22`).
+- **Body background**: gradientes radiales en esquinas (cyan top-left, indigo top-right, ambar bottom-center) para atm=sfera gaming sin fondos dominados por un color.
+
+### Header oscuro (`AppShell`)
+- Header usa `bg-foreground` (navy oscuro) para crear contraste chrome/contenido tipo client gaming.
+- El boton Google del header es un `<button>` nativo con estilos dark-context; no usa el componente `Button` para no forzar el tema claro sobre fondo oscuro.
+- Una linea de 1px con gradiente teal→indigo→transparent separa el header del contenido.
+- Texto blanco con opacidades graduales para la jerarquia de informacion del header.
+
+### Botones
+- **Primary**: gradiente `from-teal to-indigo` con sombra glow teal. Es la accion mas prominente de la vista.
+- **Secondary**: superficie blanca con borde, hover teal-soft. Para acciones secundarias.
+- No cambia la logica de cuales acciones son primary vs secondary.
+
+### Panel
+- Sombra reforzada: `shadow-lg shadow-black/6` + `ring-1 ring-black/2` para mayor profundidad y sensacion de superficie elevada.
+
+### Leaderboard — medallas top-3
+- Posicion 1: gradiente ambar/dorado (`from-amber-300 to-amber-500`), texto amber-900.
+- Posicion 2: gradiente plata (`from-slate-200 to-slate-400`), texto slate-700.
+- Posicion 3: gradiente bronce (`from-amber-600 to-amber-800`), texto amber-100.
+- Filas top-3 tienen un lavado de color horizontal sutil (gold/silver/bronze) con `bg-linear-to-r`.
+- Para posiciones 4+: badge neutro sin gradiente.
+
+### RankBadge — tiers LoL
+- `font-bold` para Gold y tiers superiores (GOLD, PLATINUM, EMERALD, DIAMOND, MASTER).
+- Platinum usa teal (alineado con el color del tier en LoL), Emerald usa verde, Diamond usa indigo, Master usa fuchsia.
+
+### StatTile
+- Icono con `ring-1 ring-accent/20` para definicion visual sin peso excesivo.
+- Gradiente de fondo `from-accent-soft/70 to-surface` (antes `/85` en valores menos saturados, ahora mas visible con la nueva paleta).
+
+### PerformanceMeter
+- Barra mas fina: `h-1.5` (antes `h-2.5`). Mas refinada y menos chunky.
+- Valor numerico en `text-base` (antes `text-sm`) para mejor legibilidad de datos.
+- Fondo de barra: `bg-border/60` (antes `bg-surface-muted ring-1 ring-border/60`). Mas limpio.
+
+### MembersPanel
+- Avatar de iniciales (`size-7`, letra inicial del nombre) para escaneo rapido sin agregar imagenes o dependencias.
+- Owner recibe tratamiento indigo en el avatar; el resto usa neutral.
+
+### EmptyState
+- Icono `⊕` (circled plus unicode) en lugar de `+` plano. Mas personalidad visual.
+- Gradiente de fondo `from-teal-soft/25 to-transparent` para mayor composicion.
+
+### Superficie y patron
+- Pattern de diamantes (45/-45 degrees, `22px`) en lugar de cuadricula simple. Mas dinamismo.
+- Shimmer del skeleton ajustado a tonos azul-gris frios para coincidir con la nueva paleta.
