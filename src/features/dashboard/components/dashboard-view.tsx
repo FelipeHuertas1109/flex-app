@@ -7,6 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Panel } from "@/components/ui/panel";
 import { CopyChip } from "@/features/dashboard/components/copy-chip";
+import { MaskedPswCardBlock, MaskedPswTableCell } from "@/features/dashboard/components/masked-psw-cell";
 import { RankBadge } from "@/features/dashboard/components/rank-badge";
 import type {
   DashboardSnapshot,
@@ -440,7 +441,7 @@ function LeaderboardRow({
         {account.winRate}%
       </td>
       <CredentialCell copyLabel="Copiar User" value={account.accountUser} />
-      <CredentialCell copyLabel="Copiar Psw" value={account.accountPsw} />
+      <MaskedPswTableCell value={account.accountPsw} />
       <td className="border-b border-cyan-200/10 px-5 py-4 text-end align-middle">
         <ManageAccountDialog
           currentAccountPsw={account.accountPsw ?? ""}
@@ -496,11 +497,7 @@ function LeaderboardCard({
           <CopyChip ariaLabel="Copiar User" value={account.accountUser ?? ""} />
         </div>
         <p className="truncate font-mono text-xs font-semibold text-white">{account.accountUser?.trim() || "—"}</p>
-        <div className="flex items-center justify-between gap-2 border-t border-cyan-200/10 pt-2">
-          <span className="text-[10px] font-black uppercase tracking-wider text-slate-500">Psw</span>
-          <CopyChip ariaLabel="Copiar Psw" value={account.accountPsw ?? ""} />
-        </div>
-        <p className="truncate font-mono text-xs font-semibold text-white">{account.accountPsw?.trim() || "—"}</p>
+        <MaskedPswCardBlock value={account.accountPsw} />
       </div>
       <div className="mt-4 flex justify-end border-t border-cyan-200/12 pt-3">
         <ManageAccountDialog
