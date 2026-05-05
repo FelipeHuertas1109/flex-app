@@ -14,6 +14,8 @@ import { RemoveMemberButton } from "@/features/groups/components/remove-member-b
 import type {
   DashboardSnapshot,
   GroupMember,
+  LeaderboardSort,
+  LeaderboardSortDirection,
   LeagueAccount,
 } from "@/features/dashboard/types";
 import { InviteMemberButton } from "@/features/invites/components/invite-member-dialog";
@@ -23,6 +25,8 @@ import { cn } from "@/lib/utils";
 type DashboardViewProps = {
   snapshot: DashboardSnapshot;
   queue: "flex" | "solo-duo";
+  sort: LeaderboardSort;
+  sortDirection: LeaderboardSortDirection;
 };
 
 type AccountWithMember = LeagueAccount & {
@@ -111,7 +115,66 @@ function leaderboardSortScore(account: LeagueAccount, queue: "flex" | "solo-duo"
   return tierPoints * 10_000 + divPoints * 100 + queueStats.lp;
 }
 
-export function DashboardView({ snapshot, queue }: DashboardViewProps) {
+function queueStatsFor(account: LeagueAccount, queue: "flex" | "solo-duo") {
+  return queue === "solo-duo" ? account.soloDuo : account.flex;
+}
+
+function sortLeaderboardAccounts(
+  accounts: AccountWithMember[],
+  queue: "flex" | "solo-duo",
+  sort: LeaderboardSort,
+  sortDirection: LeaderboardSortDirection,
+) {
+  return [...accounts].sort((left, right) => {
+    const leftStats = queueStatsFor(left, queue);
+    const rightStats = queueStatsFor(right, queue);
+    const rankScoreDiff = leaderboardSortScore(right, queue) - leaderboardSortScore(left, queue);
+    const direction = sortDirection === "asc" ? -1 : 1;
+    const rankDiff = rankScoreDiff * direction;
+
+    if (sort === "games") {
+      return (rightStats.totalGames - leftStats.totalGames) * direction || rankDiff;
+    }
+
+    if (sort === "win-rate") {
+      const leftHasGames = leftStats.totalGames > 0;
+      const rightHasGames = rightStats.totalGames > 0;
+      if (leftHasGames !== rightHasGames) return rightHasGames ? 1 : -1;
+      return (
+        (rightStats.winRate - leftStats.winRate) * direction ||
+        (rightStats.totalGames - leftStats.totalGames) * direction ||
+        rankDiff
+      );
+    }
+
+    return rankDiff;
+  });
+}
+
+function leaderboardHref(
+  queue: "flex" | "solo-duo",
+  sort: LeaderboardSort,
+  sortDirection: LeaderboardSortDirection,
+) {
+  return `/?queue=${queue}&sort=${sort}&dir=${sortDirection}`;
+}
+
+function nextSortDirection(
+  activeSort: LeaderboardSort,
+  currentDirection: LeaderboardSortDirection,
+  nextSort: LeaderboardSort,
+) {
+  if (activeSort !== nextSort) return "desc";
+  return currentDirection === "desc" ? "asc" : "desc";
+}
+
+const SORT_LABELS: Record<LeaderboardSort, string> = {
+  rank: "Rango",
+  games: "Partidas",
+  "win-rate": "Win rate",
+};
+
+export function DashboardView({ snapshot, queue, sort, sortDirection }: DashboardViewProps) {
   const memberAccounts = snapshot.members.flatMap((member) =>
     member.accounts.map((account) => ({ ...account, member })),
   );
@@ -120,18 +183,18 @@ export function DashboardView({ snapshot, queue }: DashboardViewProps) {
     member: null,
   }));
   const accounts = [...memberAccounts, ...sharedAccounts];
-  const sortedAccounts = [...accounts].sort((left, right) => leaderboardSortScore(right, queue) - leaderboardSortScore(left, queue));
+  const sortedAccounts = sortLeaderboardAccounts(accounts, queue, sort, sortDirection);
   const worstWinRateAccount = sortedAccounts
     .filter((account) => {
-      const queueStats = queue === "solo-duo" ? account.soloDuo : account.flex;
+      const queueStats = queueStatsFor(account, queue);
       return queueStats.totalGames > 0;
     })
     .sort((left, right) => {
-      const leftStats = queue === "solo-duo" ? left.soloDuo : left.flex;
-      const rightStats = queue === "solo-duo" ? right.soloDuo : right.flex;
+      const leftStats = queueStatsFor(left, queue);
+      const rightStats = queueStatsFor(right, queue);
       return leftStats.winRate - rightStats.winRate || rightStats.totalGames - leftStats.totalGames;
     })[0];
-  const worstWinRateStats = worstWinRateAccount ? (queue === "solo-duo" ? worstWinRateAccount.soloDuo : worstWinRateAccount.flex) : null;
+  const worstWinRateStats = worstWinRateAccount ? queueStatsFor(worstWinRateAccount, queue) : null;
   const memberOptions = snapshot.members.map((member) => ({
     id: member.id,
     name: member.name,
@@ -225,12 +288,18 @@ export function DashboardView({ snapshot, queue }: DashboardViewProps) {
               </div>
               <div>
                 <h2 className="text-xl font-black text-white">Leaderboard {queue === "solo-duo" ? "Solo/Duo" : "Flex"}</h2>
-                <p className="mt-0.5 text-sm text-slate-400">Ordenado por liga (tier y division) y despues LP.</p>
+                <p className="mt-0.5 text-sm text-slate-400">
+                  Ordenado por {SORT_LABELS[sort]} {sortDirection === "asc" ? "de menor a mayor" : "de mayor a menor"}.
+                </p>
               </div>
             </div>
-            <div className="flex items-center gap-2 self-start">
-              <Link href="/?queue=flex"><Badge tone={queue === "flex" ? "teal" : "neutral"}>Flex</Badge></Link>
-              <Link href="/?queue=solo-duo"><Badge tone={queue === "solo-duo" ? "teal" : "neutral"}>Solo/Duo</Badge></Link>
+            <div className="flex flex-wrap items-center justify-end gap-2 self-start">
+              <Link href={leaderboardHref("flex", sort, sortDirection)}><Badge tone={queue === "flex" ? "teal" : "neutral"}>Flex</Badge></Link>
+              <Link href={leaderboardHref("solo-duo", sort, sortDirection)}><Badge tone={queue === "solo-duo" ? "teal" : "neutral"}>Solo/Duo</Badge></Link>
+              <span className="mx-1 hidden h-5 w-px bg-cyan-200/14 md:hidden sm:block" />
+              <Link className="md:hidden" href={leaderboardHref(queue, "rank", nextSortDirection(sort, sortDirection, "rank"))}><Badge tone={sort === "rank" ? "teal" : "neutral"}>Rango {sort === "rank" ? (sortDirection === "asc" ? "↑" : "↓") : ""}</Badge></Link>
+              <Link className="md:hidden" href={leaderboardHref(queue, "games", nextSortDirection(sort, sortDirection, "games"))}><Badge tone={sort === "games" ? "teal" : "neutral"}>Partidas {sort === "games" ? (sortDirection === "asc" ? "↑" : "↓") : ""}</Badge></Link>
+              <Link className="md:hidden" href={leaderboardHref(queue, "win-rate", nextSortDirection(sort, sortDirection, "win-rate"))}><Badge tone={sort === "win-rate" ? "teal" : "neutral"}>Win rate {sort === "win-rate" ? (sortDirection === "asc" ? "↑" : "↓") : ""}</Badge></Link>
               <SyncAllAccountsButton groupId={snapshot.group.id} />
             </div>
           </div>
@@ -244,10 +313,16 @@ export function DashboardView({ snapshot, queue }: DashboardViewProps) {
                       <th className="w-[4.75rem] px-4 py-3 text-center font-black">#</th>
                       <th className="px-4 py-3 font-black">Propietario</th>
                       <th className="px-4 py-3 font-black">Riot ID</th>
-                      <th className="px-4 py-3 font-black">Rango</th>
+                      <SortableHeader activeSort={sort} className="px-4 py-3" queue={queue} sort="rank" sortDirection={sortDirection}>
+                        Rango
+                      </SortableHeader>
                       <th className="px-4 py-3 text-center font-black">LP</th>
-                      <th className="whitespace-nowrap px-4 py-3 text-center font-black">Partidas</th>
-                      <th className="whitespace-nowrap px-4 py-3 text-center font-black">Win rate</th>
+                      <SortableHeader activeSort={sort} className="px-4 py-3 text-center" queue={queue} sort="games" sortDirection={sortDirection}>
+                        Partidas
+                      </SortableHeader>
+                      <SortableHeader activeSort={sort} className="px-4 py-3 text-center" queue={queue} sort="win-rate" sortDirection={sortDirection}>
+                        Win rate
+                      </SortableHeader>
                       <th className="px-4 py-3 font-black">Usuario</th>
                       <th className="px-4 py-3 font-black">Contraseña</th>
                       <th className="whitespace-nowrap px-4 py-3 text-end font-black">Acciones</th>
@@ -295,6 +370,51 @@ export function DashboardView({ snapshot, queue }: DashboardViewProps) {
     </div>
     <DashboardBackgroundSync groupId={snapshot.group.id} />
     </AddAccountProvider>
+  );
+}
+
+function SortableHeader({
+  activeSort,
+  children,
+  className,
+  queue,
+  sort,
+  sortDirection,
+}: {
+  activeSort: LeaderboardSort;
+  children: ReactNode;
+  className?: string;
+  queue: "flex" | "solo-duo";
+  sort: LeaderboardSort;
+  sortDirection: LeaderboardSortDirection;
+}) {
+  const active = activeSort === sort;
+  const nextDirection = nextSortDirection(activeSort, sortDirection, sort);
+
+  return (
+    <th className={cn("whitespace-nowrap font-black", className)}>
+      <Link
+        aria-current={active ? "true" : undefined}
+        className={cn(
+          "inline-flex items-center gap-1.5 rounded-md border px-2 py-1 text-slate-200 transition",
+          "border-cyan-200/14 bg-white/[0.035] shadow-sm shadow-black/10 hover:border-cyan-300/50 hover:bg-cyan-400/10 hover:text-cyan-100",
+          className?.includes("text-center") ? "justify-center" : "justify-start",
+          active && "border-cyan-300/70 bg-cyan-400/12 text-cyan-100 shadow-[0_0_14px_rgba(25,216,255,0.18)]",
+        )}
+        href={leaderboardHref(queue, sort, nextDirection)}
+      >
+        <span>{children}</span>
+        <span
+          aria-hidden="true"
+          className={cn(
+            "text-[10px] leading-none text-cyan-300 transition-opacity",
+            active ? "opacity-100" : "opacity-50",
+          )}
+        >
+          {active ? (sortDirection === "asc" ? "↑" : "↓") : "↕"}
+        </span>
+      </Link>
+    </th>
   );
 }
 

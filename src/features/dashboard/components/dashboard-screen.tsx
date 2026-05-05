@@ -6,8 +6,17 @@ import { createClient } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
 import { Panel } from "@/components/ui/panel";
 import { CreateGroupForm } from "@/features/groups/components/create-group-form";
+import type { LeaderboardSort, LeaderboardSortDirection } from "@/features/dashboard/types";
 
-export async function DashboardScreen({ queue }: { queue: "flex" | "solo-duo" }) {
+export async function DashboardScreen({
+  queue,
+  sort,
+  sortDirection,
+}: {
+  queue: "flex" | "solo-duo";
+  sort: LeaderboardSort;
+  sortDirection: LeaderboardSortDirection;
+}) {
   const supabase = await createClient();
   const {
     data: { user },
@@ -48,7 +57,7 @@ export async function DashboardScreen({ queue }: { queue: "flex" | "solo-duo" })
 
   return (
     <AppShell>
-      <DashboardView queue={queue} snapshot={snapshot} />
+      <DashboardView queue={queue} snapshot={snapshot} sort={sort} sortDirection={sortDirection} />
     </AppShell>
   );
 }

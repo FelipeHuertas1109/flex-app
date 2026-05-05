@@ -40,6 +40,10 @@ export type LeagueAccount = {
   leagueOfGraphsStatus: "synced" | "pending" | "stale";
 };
 
+export type LeaderboardSort = "rank" | "games" | "win-rate";
+
+export type LeaderboardSortDirection = "asc" | "desc";
+
 export type GroupMember = {
   id: string;
   name: string;
