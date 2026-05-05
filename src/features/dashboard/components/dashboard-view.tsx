@@ -249,7 +249,7 @@ export function DashboardView({ snapshot }: DashboardViewProps) {
                   Las cuentas compartidas son accesibles por varios miembros del equipo.
                 </p>
               </div>
-              <div className="grid gap-3 p-4 md:hidden">
+              <div className="grid min-w-0 gap-3 p-3 sm:p-4 md:hidden">
                 {sortedAccounts.map((account, index) => (
                   <LeaderboardCard
                     account={account}
@@ -526,22 +526,22 @@ function LeaderboardCard({
   return (
     <article
       className={cn(
-        "rounded-xl border p-4 shadow-xl shadow-black/20",
+        "min-w-0 overflow-hidden rounded-xl border p-3 shadow-xl shadow-black/20 sm:p-4",
         cardStyle,
       )}
     >
-      <div className="flex items-start justify-between gap-3">
+      <div className="flex min-w-0 flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
         <MemberIdentity member={account.member} rank={index + 1} />
-        <RankBadge account={account} />
+        <RankBadge account={account} className="w-fit max-w-full sm:shrink-0" />
       </div>
-      <div className="mt-4">
+      <div className="mt-4 min-w-0">
         <LeaderboardAccountIdentity account={account} />
       </div>
-      <div className="mt-4 grid grid-cols-2 gap-3">
+      <div className="mt-4 grid min-w-0 grid-cols-2 gap-2 sm:gap-3">
         <MetricPill label="LP" value={account.lp.toString()} />
         <MetricPill label="Win rate" value={`${account.winRate}%`} />
       </div>
-      <div className="mt-4 grid gap-2 rounded-lg border border-cyan-200/12 bg-black/22 p-3">
+      <div className="mt-4 grid min-w-0 gap-2 rounded-lg border border-cyan-200/12 bg-black/22 p-3">
         <div className="flex items-center justify-between gap-2">
           <span className="text-[10px] font-black uppercase tracking-wider text-slate-500">User</span>
           <CopyChip ariaLabel="Copiar User" value={account.accountUser ?? ""} />
@@ -619,10 +619,10 @@ function MemberIdentity({ member, rank }: { member: GroupMember | null; rank: nu
           : "border-slate-500/34 bg-linear-to-br from-slate-700/80 to-slate-950 text-slate-300 shadow-black/25";
 
   return (
-    <div className="flex min-w-0 items-center gap-3.5">
+    <div className="flex min-w-0 items-center gap-2.5 sm:gap-3.5">
       <div
         className={cn(
-          "hex-mark relative flex size-12 shrink-0 items-center justify-center border text-base font-black shadow-lg",
+          "hex-mark relative flex size-11 shrink-0 items-center justify-center border text-sm font-black shadow-lg sm:size-12 sm:text-base",
           badgeStyle,
         )}
       >
@@ -645,9 +645,9 @@ function MemberIdentity({ member, rank }: { member: GroupMember | null; rank: nu
 function LeaderboardAccountIdentity({ account, compactCopy = false }: { account: AccountWithMember; compactCopy?: boolean }) {
   const riotLine = `${account.summonerName}#${account.tagLine}`;
   return (
-    <div className="min-w-0">
+    <div className="min-w-0 overflow-hidden">
       <div className="flex min-w-0 flex-wrap items-center gap-2">
-        <span className="truncate font-black text-white">
+        <span className="min-w-0 max-w-full truncate font-black text-white">
           {account.summonerName}
           <span className="text-slate-400">#{account.tagLine}</span>
         </span>

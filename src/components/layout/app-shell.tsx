@@ -27,7 +27,7 @@ export function AppShell({ children }: AppShellProps) {
   const pathname = usePathname() ?? "/";
 
   return (
-    <div className="min-h-screen overflow-hidden">
+    <div className="min-h-screen overflow-x-hidden">
       <div className="pointer-events-none fixed inset-0 -z-10 surface-pattern" />
       <div className="pointer-events-none fixed inset-x-0 top-0 -z-10 h-72 bg-[radial-gradient(ellipse_at_top,rgba(25,216,255,0.14),transparent_62%)]" />
 

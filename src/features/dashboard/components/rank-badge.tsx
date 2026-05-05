@@ -4,6 +4,7 @@ import { cn } from "@/lib/utils";
 
 type RankBadgeProps = {
   account: LeagueAccount;
+  className?: string;
 };
 
 const tierLabels: Record<LeagueAccount["tier"], string> = {
@@ -58,7 +59,7 @@ const tierEmblems: Partial<Record<LeagueAccount["tier"], string>> = {
   CHALLENGER: "/emblem/emblem-challenger.png",
 };
 
-export function RankBadge({ account }: RankBadgeProps) {
+export function RankBadge({ account, className }: RankBadgeProps) {
   const tierStyle = tierStyles[account.tier] ?? tierStyles.UNRANKED;
   const tierLabel = tierLabels[account.tier] ?? tierLabels.UNRANKED;
   const label = (account.division ? `${tierLabel} ${account.division}` : tierLabel).toUpperCase();
@@ -67,8 +68,9 @@ export function RankBadge({ account }: RankBadgeProps) {
   return (
     <span
       className={cn(
-        "inline-flex h-8 items-center gap-1.5 rounded-md border px-2.5 text-[11px] font-black leading-none tracking-[0.03em]",
+        "inline-flex h-8 max-w-full items-center gap-1.5 rounded-md border px-2.5 text-[11px] font-black leading-none tracking-[0.03em]",
         tierStyle,
+        className,
       )}
     >
       {emblemSrc ? (
@@ -84,7 +86,7 @@ export function RankBadge({ account }: RankBadgeProps) {
           />
         </span>
       ) : null}
-      {label}
+      <span className="min-w-0 truncate">{label}</span>
     </span>
   );
 }
