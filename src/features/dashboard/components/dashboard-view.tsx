@@ -1,4 +1,6 @@
-import type { ReactNode } from "react";
+"use client";
+
+import { useMemo, useState, type ReactNode } from "react";
 import { AddAccountProvider, AddAccountTrigger } from "@/features/accounts/components/add-account-dialog";
 import { ManageAccountDialog } from "@/features/accounts/components/manage-account-dialog";
 import { DashboardBackgroundSync } from "@/features/accounts/components/dashboard-background-sync";
@@ -31,6 +33,7 @@ type MemberOption = {
   id: string;
   name: string;
 };
+type QueueFilter = "solo" | "flex";
 
 type Accent = "teal" | "indigo" | "gold" | "danger";
 type StatIconName = "members" | "accounts" | "crown";
@@ -109,15 +112,32 @@ function flexLeaderboardSortScore(account: LeagueAccount): number {
 }
 
 export function DashboardView({ snapshot }: DashboardViewProps) {
-  const memberAccounts = snapshot.members.flatMap((member) =>
-    member.accounts.map((account) => ({ ...account, member })),
+  const [queueFilter, setQueueFilter] = useState<QueueFilter>("flex");
+  const accounts = useMemo(() => {
+    const memberAccounts = snapshot.members.flatMap((member) =>
+      member.accounts.map((account) => ({ ...account, member })),
+    );
+    const sharedAccounts = snapshot.sharedAccounts.map((account) => ({
+      ...account,
+      member: null,
+    }));
+    return [...memberAccounts, ...sharedAccounts];
+  }, [snapshot.members, snapshot.sharedAccounts]);
+  const queueAccounts = useMemo(
+    () =>
+      accounts.map((account) => {
+        const isSolo = queueFilter === "solo";
+        return {
+          ...account,
+          tier: isSolo ? (account.soloTier ?? "UNRANKED") : (account.flexTier ?? account.tier),
+          division: isSolo ? (account.soloDivision ?? null) : (account.flexDivision ?? account.division),
+          lp: isSolo ? (account.soloLp ?? 0) : (account.flexLp ?? account.lp),
+          winRate: isSolo ? (account.soloWinRate ?? 0) : (account.flexWinRate ?? account.winRate),
+        };
+      }),
+    [accounts, queueFilter],
   );
-  const sharedAccounts = snapshot.sharedAccounts.map((account) => ({
-    ...account,
-    member: null,
-  }));
-  const accounts = [...memberAccounts, ...sharedAccounts];
-  const sortedAccounts = [...accounts].sort((left, right) => flexLeaderboardSortScore(right) - flexLeaderboardSortScore(left));
+  const sortedAccounts = [...queueAccounts].sort((left, right) => flexLeaderboardSortScore(right) - flexLeaderboardSortScore(left));
   const leaderLp = sortedAccounts[0]?.lp ?? 0;
   const memberOptions = snapshot.members.map((member) => ({
     id: member.id,
@@ -206,11 +226,27 @@ export function DashboardView({ snapshot }: DashboardViewProps) {
                 <TrophyIcon className="relative size-7 drop-shadow-[0_0_10px_rgba(245,184,63,0.65)]" />
               </div>
               <div>
-                <h2 className="text-xl font-black text-white">Leaderboard Flex</h2>
+                <h2 className="text-xl font-black text-white">Leaderboard {queueFilter === "solo" ? "SoloQ" : "Flex"}</h2>
                 <p className="mt-0.5 text-sm text-slate-400">Ordenado por liga (tier y division) y despues LP.</p>
               </div>
             </div>
             <div className="flex items-center gap-2 self-start">
+              <div className="inline-flex rounded-lg border border-cyan-200/16 bg-black/25 p-1">
+                <button
+                  className={cn("rounded-md px-3 py-1.5 text-xs font-black transition", queueFilter === "solo" ? "bg-cyan-300/20 text-white" : "text-slate-400 hover:text-slate-200")}
+                  onClick={() => setQueueFilter("solo")}
+                  type="button"
+                >
+                  SoloQ
+                </button>
+                <button
+                  className={cn("rounded-md px-3 py-1.5 text-xs font-black transition", queueFilter === "flex" ? "bg-cyan-300/20 text-white" : "text-slate-400 hover:text-slate-200")}
+                  onClick={() => setQueueFilter("flex")}
+                  type="button"
+                >
+                  Flex
+                </button>
+              </div>
               <Badge tone="gold">Top del grupo</Badge>
               <SyncAllAccountsButton groupId={snapshot.group.id} />
             </div>

@@ -27,6 +27,14 @@ export type LeagueAccount = {
   division: "I" | "II" | "III" | "IV" | null;
   lp: number;
   winRate: number;
+  soloTier?: RankTier;
+  soloDivision?: "I" | "II" | "III" | "IV" | null;
+  soloLp?: number;
+  soloWinRate?: number;
+  flexTier?: RankTier;
+  flexDivision?: "I" | "II" | "III" | "IV" | null;
+  flexLp?: number;
+  flexWinRate?: number;
   leagueOfGraphsStatus: "synced" | "pending" | "stale";
 };
 
