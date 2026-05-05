@@ -78,18 +78,23 @@ function toMemberRole(role: string): GroupMember["role"] {
   return "member";
 }
 
-export async function getDashboardSnapshot(): Promise<DashboardSnapshot | null> {
+export async function getDashboardSnapshot(viewerId?: string): Promise<DashboardSnapshot | null> {
   const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  let userId = viewerId;
 
-  if (!user) return null;
+  if (!userId) {
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+    userId = user?.id;
+  }
+
+  if (!userId) return null;
 
   const { data: memberRecord } = await supabase
     .from("group_members")
     .select("group_id, invite_admin, role")
-    .eq("user_id", user.id)
+    .eq("user_id", userId)
     .limit(1)
     .maybeSingle();
 
@@ -97,32 +102,33 @@ export async function getDashboardSnapshot(): Promise<DashboardSnapshot | null> 
     return null;
   }
 
-  const { data: group } = await supabase.from("groups").select("*").eq("id", memberRecord.group_id).single();
+  const groupId = memberRecord.group_id;
+  const [groupResult, membersResult, accountsResult, invitesResult] = await Promise.all([
+    supabase.from("groups").select("id, name, created_at").eq("id", groupId).single(),
+    supabase.from("group_members").select("role, joined_at, profiles(id, email, full_name)").eq("group_id", groupId),
+    supabase
+      .from("group_accounts")
+      .select(
+        "id, user_id, is_shared, custom_name, credential_user, credential_psw, riot_accounts(game_name, tag_line, tier, rank, lp, win_rate, average_position, last_synced_at, routing_platform)",
+      )
+      .eq("group_id", groupId),
+    supabase
+      .from("group_invites")
+      .select("id, email, status, created_at")
+      .eq("group_id", groupId)
+      .eq("status", "pending")
+      .order("created_at", { ascending: false }),
+  ]);
+
+  const group = groupResult.data;
 
   if (!group) return null;
 
-  const { data: membersData } = await supabase
-    .from("group_members")
-    .select("role, joined_at, profiles(id, email, full_name)")
-    .eq("group_id", group.id);
-
-  const { data: accountsData } = await supabase
-    .from("group_accounts")
-    .select("id, user_id, is_shared, custom_name, credential_user, credential_psw, riot_accounts(*)")
-    .eq("group_id", group.id);
-
-  const { data: invitesData } = await supabase
-    .from("group_invites")
-    .select("id, email, status, created_at")
-    .eq("group_id", group.id)
-    .eq("status", "pending")
-    .order("created_at", { ascending: false });
-
-  const memberRowsRaw = (membersData ?? []) as unknown as GroupMemberQueryRow[];
+  const memberRowsRaw = (membersResult.data ?? []) as unknown as GroupMemberQueryRow[];
   const memberRows = memberRowsRaw.filter((m): m is GroupMemberQueryRow & { profiles: DashboardProfileRow } =>
     Boolean(m.profiles?.id),
   );
-  const accountRows = (accountsData ?? []) as unknown as GroupAccountQueryRow[];
+  const accountRows = (accountsResult.data ?? []) as unknown as GroupAccountQueryRow[];
 
   const toLeagueAccount = (acc: GroupAccountQueryRow): LeagueAccount | null => {
     const riotRaw = acc.riot_accounts as RiotAccountRow | RiotAccountRow[] | null | undefined;
@@ -173,7 +179,7 @@ export async function getDashboardSnapshot(): Promise<DashboardSnapshot | null> 
     return account ? [account] : [];
   });
 
-  const invites: GroupInvite[] = (invitesData ?? []).map((row) => ({
+  const invites: GroupInvite[] = (invitesResult.data ?? []).map((row) => ({
     id: row.id,
     email: row.email,
     status: row.status === "accepted" ? "accepted" : "pending",
@@ -181,7 +187,7 @@ export async function getDashboardSnapshot(): Promise<DashboardSnapshot | null> 
   }));
 
   return {
-    viewerId: user.id,
+    viewerId: userId,
     group: {
       id: group.id,
       name: group.name,

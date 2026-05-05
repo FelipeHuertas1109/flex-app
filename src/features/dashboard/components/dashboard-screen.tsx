@@ -17,7 +17,7 @@ export async function DashboardScreen() {
     redirect("/login");
   }
 
-  const snapshot = await getDashboardSnapshot();
+  const snapshot = await getDashboardSnapshot(user.id);
 
   if (!snapshot) {
     return (

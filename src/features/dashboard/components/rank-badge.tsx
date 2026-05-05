@@ -47,16 +47,16 @@ const tierStyles: Record<LeagueAccount["tier"], string> = {
 };
 
 const tierEmblems: Partial<Record<LeagueAccount["tier"], string>> = {
-  IRON: "/emblem/emblem-iron.png",
-  BRONZE: "/emblem/emblem-bronze.png",
-  SILVER: "/emblem/emblem-silver.png",
-  GOLD: "/emblem/emblem-gold.png",
-  PLATINUM: "/emblem/emblem-platinum.png",
-  EMERALD: "/emblem/emblem-emerald.png",
-  DIAMOND: "/emblem/emblem-diamond.png",
-  MASTER: "/emblem/emblem-master.png",
-  GRANDMASTER: "/emblem/emblem-grandmaster.png",
-  CHALLENGER: "/emblem/emblem-challenger.png",
+  IRON: "/emblem-small/emblem-iron.webp",
+  BRONZE: "/emblem-small/emblem-bronze.webp",
+  SILVER: "/emblem-small/emblem-silver.webp",
+  GOLD: "/emblem-small/emblem-gold.webp",
+  PLATINUM: "/emblem-small/emblem-platinum.webp",
+  EMERALD: "/emblem-small/emblem-emerald.webp",
+  DIAMOND: "/emblem-small/emblem-diamond.webp",
+  MASTER: "/emblem-small/emblem-master.webp",
+  GRANDMASTER: "/emblem-small/emblem-grandmaster.webp",
+  CHALLENGER: "/emblem-small/emblem-challenger.webp",
 };
 
 export function RankBadge({ account, className }: RankBadgeProps) {
