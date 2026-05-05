@@ -1,15 +1,14 @@
 import type { ReactNode } from "react";
 import Link from "next/link";
 import { AddAccountProvider, AddAccountTrigger } from "@/features/accounts/components/add-account-dialog";
-import { ManageAccountDialog } from "@/features/accounts/components/manage-account-dialog";
 import { DashboardBackgroundSync } from "@/features/accounts/components/dashboard-background-sync";
 import { SyncAllAccountsButton } from "@/features/accounts/components/sync-all-accounts-button";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Panel } from "@/components/ui/panel";
+import { AccountDetailsButton } from "@/features/dashboard/components/account-details-button";
 import { CopyChip } from "@/features/dashboard/components/copy-chip";
 import { ExternalStatsButton } from "@/features/dashboard/components/external-stats-button";
-import { MaskedPswCardBlock, MaskedPswTableCell } from "@/features/dashboard/components/masked-psw-cell";
 import { RankBadge } from "@/features/dashboard/components/rank-badge";
 import { RemoveMemberButton } from "@/features/groups/components/remove-member-button";
 import type {
@@ -308,7 +307,7 @@ export function DashboardView({ snapshot, queue, sort, sortDirection }: Dashboar
           {sortedAccounts.length > 0 ? (
             <>
               <div className="hidden overflow-x-auto p-4 md:block">
-                <table className="w-full min-w-[1200px] border-separate border-spacing-y-1 text-left">
+                <table className="w-full min-w-[1040px] border-separate border-spacing-y-1 text-left">
                   <thead className="text-[11px] uppercase tracking-[0.08em] text-slate-300/85">
                     <tr>
                       <th className="w-[4.75rem] px-4 py-3 text-center font-black">#</th>
@@ -324,8 +323,6 @@ export function DashboardView({ snapshot, queue, sort, sortDirection }: Dashboar
                       <SortableHeader activeSort={sort} className="px-4 py-3 text-center" queue={queue} sort="win-rate" sortDirection={sortDirection}>
                         Win rate
                       </SortableHeader>
-                      <th className="px-4 py-3 font-black">Usuario</th>
-                      <th className="px-4 py-3 font-black">Contraseña</th>
                       <th className="whitespace-nowrap px-4 py-3 text-end font-black">Acciones</th>
                     </tr>
                   </thead>
@@ -586,18 +583,6 @@ function winRateTone(winRate: number) {
   return "text-rose-400";
 }
 
-function CredentialCell({ copyLabel, value }: { copyLabel: string; value: string | null }) {
-  const text = value?.trim() ?? "";
-  return (
-    <td className="px-4 py-5">
-      <div className="flex max-w-[12rem] items-center gap-2">
-        <span className="min-w-0 flex-1 truncate font-mono text-xs font-black text-slate-100">{text || "—"}</span>
-        <CopyChip ariaLabel={copyLabel} compact value={text} />
-      </div>
-    </td>
-  );
-}
-
 function LeaderboardRow({
   account,
   index,
@@ -642,14 +627,12 @@ function LeaderboardRow({
       <td className={cn("px-4 py-5 text-center text-sm font-black", winRateTone(queueStats.winRate))}>
         {queueStats.winRate}%
       </td>
-      <CredentialCell copyLabel="Copiar User" value={account.accountUser} />
-      <MaskedPswTableCell value={account.accountPsw} />
       <td className="rounded-r-lg px-4 py-5 align-middle">
         <div className="flex justify-end gap-2">
           <ExternalStatsButton gameName={account.summonerName} region={account.region} tagLine={account.tagLine} />
-          <ManageAccountDialog
-            currentAccountPsw={account.accountPsw ?? ""}
-            currentAccountUser={account.accountUser ?? ""}
+          <AccountDetailsButton
+            accountPsw={account.accountPsw}
+            accountUser={account.accountUser}
             currentIsShared={account.isShared}
             currentOwnerId={account.member?.id ?? ""}
             groupAccountId={account.id}
@@ -701,19 +684,11 @@ function LeaderboardCard({
         <MetricPill label="Partidas" value={queueStats.totalGames.toString()} />
         <MetricPill label="Win rate" value={`${queueStats.winRate}%`} />
       </div>
-      <div className="mt-4 grid min-w-0 gap-2 rounded-lg border border-cyan-200/12 bg-black/22 p-3">
-        <div className="flex items-center justify-between gap-2">
-          <span className="text-[10px] font-black uppercase tracking-wider text-slate-500">User</span>
-          <CopyChip ariaLabel="Copiar User" value={account.accountUser ?? ""} />
-        </div>
-        <p className="truncate font-mono text-xs font-semibold text-white">{account.accountUser?.trim() || "—"}</p>
-        <MaskedPswCardBlock value={account.accountPsw} />
-      </div>
       <div className="mt-4 flex justify-end gap-2 border-t border-cyan-200/12 pt-3">
         <ExternalStatsButton gameName={account.summonerName} region={account.region} tagLine={account.tagLine} />
-        <ManageAccountDialog
-          currentAccountPsw={account.accountPsw ?? ""}
-          currentAccountUser={account.accountUser ?? ""}
+        <AccountDetailsButton
+          accountPsw={account.accountPsw}
+          accountUser={account.accountUser}
           currentIsShared={account.isShared}
           currentOwnerId={account.member?.id ?? ""}
           groupAccountId={account.id}

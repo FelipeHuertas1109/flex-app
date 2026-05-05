@@ -137,7 +137,7 @@ export function ManageAccountModal({
                     id={`edit-psw-${groupAccountId}`}
                     name="accountPsw"
                     placeholder="Main"
-                    type="text"
+                    type="password"
                   />
                 </div>
               </fieldset>
