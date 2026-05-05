@@ -1,4 +1,5 @@
 import type { ReactNode } from "react";
+import Link from "next/link";
 import { AddAccountProvider, AddAccountTrigger } from "@/features/accounts/components/add-account-dialog";
 import { ManageAccountDialog } from "@/features/accounts/components/manage-account-dialog";
 import { DashboardBackgroundSync } from "@/features/accounts/components/dashboard-background-sync";
@@ -21,6 +22,7 @@ import { cn } from "@/lib/utils";
 
 type DashboardViewProps = {
   snapshot: DashboardSnapshot;
+  queue: "flex" | "solo-duo";
 };
 
 type AccountWithMember = LeagueAccount & {
@@ -96,19 +98,20 @@ const DIVISION_SORT_ORDER: Record<string, number> = {
   IV: 1,
 };
 
-function flexLeaderboardSortScore(account: LeagueAccount): number {
-  const tier = account.tier.toUpperCase();
+function leaderboardSortScore(account: LeagueAccount, queue: "flex" | "solo-duo"): number {
+  const queueStats = queue === "solo-duo" ? account.soloDuo : account.flex;
+  const tier = queueStats.tier.toUpperCase();
   const tierPoints = TIER_SORT_ORDER[tier] ?? 0;
   let divPoints = 0;
-  if (account.division && DIVISION_SORT_ORDER[account.division]) {
-    divPoints = DIVISION_SORT_ORDER[account.division];
+  if (queueStats.division && DIVISION_SORT_ORDER[queueStats.division]) {
+    divPoints = DIVISION_SORT_ORDER[queueStats.division];
   } else if (tier === "MASTER" || tier === "GRANDMASTER" || tier === "CHALLENGER") {
     divPoints = 5;
   }
-  return tierPoints * 10_000 + divPoints * 100 + account.lp;
+  return tierPoints * 10_000 + divPoints * 100 + queueStats.lp;
 }
 
-export function DashboardView({ snapshot }: DashboardViewProps) {
+export function DashboardView({ snapshot, queue }: DashboardViewProps) {
   const memberAccounts = snapshot.members.flatMap((member) =>
     member.accounts.map((account) => ({ ...account, member })),
   );
@@ -117,8 +120,8 @@ export function DashboardView({ snapshot }: DashboardViewProps) {
     member: null,
   }));
   const accounts = [...memberAccounts, ...sharedAccounts];
-  const sortedAccounts = [...accounts].sort((left, right) => flexLeaderboardSortScore(right) - flexLeaderboardSortScore(left));
-  const leaderLp = sortedAccounts[0]?.lp ?? 0;
+  const sortedAccounts = [...accounts].sort((left, right) => leaderboardSortScore(right, queue) - leaderboardSortScore(left, queue));
+  const leaderLp = sortedAccounts[0] ? (queue === "solo-duo" ? sortedAccounts[0].soloDuo.lp : sortedAccounts[0].flex.lp) : 0;
   const memberOptions = snapshot.members.map((member) => ({
     id: member.id,
     name: member.name,
@@ -140,7 +143,7 @@ export function DashboardView({ snapshot }: DashboardViewProps) {
             <div className="max-w-3xl">
               <div className="flex flex-wrap items-center gap-2">
                 <Badge tone="teal">Grupo privado</Badge>
-                <Badge tone="gold">Flex queue</Badge>
+                <Badge tone="gold">{queue === "solo-duo" ? "Solo/Duo queue" : "Flex queue"}</Badge>
               </div>
               <div className="mt-4 flex flex-wrap items-end gap-3">
                 <h1 className="max-w-[min(100%,36rem)] text-4xl font-black tracking-tight text-white sm:text-5xl">
@@ -151,7 +154,7 @@ export function DashboardView({ snapshot }: DashboardViewProps) {
                 ) : null}
               </div>
               <p className="mt-3 max-w-2xl text-sm leading-6 text-slate-300 sm:text-base">
-                Coordina cuentas y miembros con una lectura clara del ranking Flex antes de conectar datos
+                Coordina cuentas y miembros con una lectura clara del ranking {queue === "solo-duo" ? "Solo/Duo" : "Flex"} antes de conectar datos
                 Riot en profundidad.
               </p>
             </div>
@@ -206,12 +209,13 @@ export function DashboardView({ snapshot }: DashboardViewProps) {
                 <TrophyIcon className="relative size-7 drop-shadow-[0_0_10px_rgba(245,184,63,0.65)]" />
               </div>
               <div>
-                <h2 className="text-xl font-black text-white">Leaderboard Flex</h2>
+                <h2 className="text-xl font-black text-white">Leaderboard {queue === "solo-duo" ? "Solo/Duo" : "Flex"}</h2>
                 <p className="mt-0.5 text-sm text-slate-400">Ordenado por liga (tier y division) y despues LP.</p>
               </div>
             </div>
             <div className="flex items-center gap-2 self-start">
-              <Badge tone="gold">Top del grupo</Badge>
+              <Link href="/?queue=flex"><Badge tone={queue === "flex" ? "teal" : "neutral"}>Flex</Badge></Link>
+              <Link href="/?queue=solo-duo"><Badge tone={queue === "solo-duo" ? "teal" : "neutral"}>Solo/Duo</Badge></Link>
               <SyncAllAccountsButton groupId={snapshot.group.id} />
             </div>
           </div>
@@ -240,6 +244,7 @@ export function DashboardView({ snapshot }: DashboardViewProps) {
                         index={index}
                         key={account.id}
                         memberOptions={memberOptions}
+                        queue={queue}
                       />
                     ))}
                   </tbody>
@@ -256,6 +261,7 @@ export function DashboardView({ snapshot }: DashboardViewProps) {
                     index={index}
                     key={account.id}
                     memberOptions={memberOptions}
+                    queue={queue}
                   />
                 ))}
               </div>
@@ -455,11 +461,14 @@ function LeaderboardRow({
   account,
   index,
   memberOptions,
+  queue,
 }: {
   account: AccountWithMember;
   index: number;
   memberOptions: MemberOption[];
+  queue: "flex" | "solo-duo";
 }) {
+  const queueStats = queue === "solo-duo" ? account.soloDuo : account.flex;
   const rowTone = account.isShared
     ? "outline-amber-400/48 bg-[linear-gradient(90deg,rgba(245,184,63,0.21),rgba(245,184,63,0.09)_34%,rgba(7,19,39,0.87)_72%)] shadow-[inset_4px_0_0_rgba(245,184,63,0.95),0_0_24px_rgba(245,184,63,0.15)] hover:outline-amber-300/68 hover:bg-[linear-gradient(90deg,rgba(245,184,63,0.26),rgba(245,184,63,0.11)_34%,rgba(7,19,39,0.92)_72%)]"
     : "outline-cyan-300/24 bg-[linear-gradient(90deg,rgba(25,216,255,0.105),rgba(7,19,39,0.82)_31%,rgba(7,19,39,0.9)_74%)] shadow-[inset_4px_0_0_rgba(25,216,255,0.52),0_0_18px_rgba(25,216,255,0.045)] hover:outline-cyan-200/42 hover:bg-[linear-gradient(90deg,rgba(25,216,255,0.14),rgba(7,19,39,0.86)_31%,rgba(7,19,39,0.93)_74%)]";
@@ -481,13 +490,13 @@ function LeaderboardRow({
         <LeaderboardAccountIdentity account={account} compactCopy />
       </td>
       <td className="px-4 py-5">
-        <RankBadge account={account} />
+        <RankBadge division={queueStats.division} tier={queueStats.tier} />
       </td>
       <td className="px-4 py-5 text-center font-mono text-sm font-black text-white">
-        {account.lp}
+        {queueStats.lp}
       </td>
-      <td className={cn("px-4 py-5 text-center text-sm font-black", winRateTone(account.winRate))}>
-        {account.winRate}%
+      <td className={cn("px-4 py-5 text-center text-sm font-black", winRateTone(queueStats.winRate))}>
+        {queueStats.winRate}%
       </td>
       <CredentialCell copyLabel="Copiar User" value={account.accountUser} />
       <MaskedPswTableCell value={account.accountPsw} />
@@ -509,11 +518,14 @@ function LeaderboardCard({
   account,
   index,
   memberOptions,
+  queue,
 }: {
   account: AccountWithMember;
   index: number;
   memberOptions: MemberOption[];
+  queue: "flex" | "solo-duo";
 }) {
+  const queueStats = queue === "solo-duo" ? account.soloDuo : account.flex;
   const cardStyle =
     index === 0
       ? "border-amber-300/40 bg-linear-to-br from-amber-400/14 to-white/[0.035] shadow-amber-500/12"
@@ -532,14 +544,14 @@ function LeaderboardCard({
     >
       <div className="flex min-w-0 flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
         <MemberIdentity member={account.member} rank={index + 1} />
-        <RankBadge account={account} className="w-fit max-w-full sm:shrink-0" />
+        <RankBadge className="w-fit max-w-full sm:shrink-0" division={queueStats.division} tier={queueStats.tier} />
       </div>
       <div className="mt-4 min-w-0">
         <LeaderboardAccountIdentity account={account} />
       </div>
       <div className="mt-4 grid min-w-0 grid-cols-2 gap-2 sm:gap-3">
-        <MetricPill label="LP" value={account.lp.toString()} />
-        <MetricPill label="Win rate" value={`${account.winRate}%`} />
+        <MetricPill label="LP" value={queueStats.lp.toString()} />
+        <MetricPill label="Win rate" value={`${queueStats.winRate}%`} />
       </div>
       <div className="mt-4 grid min-w-0 gap-2 rounded-lg border border-cyan-200/12 bg-black/22 p-3">
         <div className="flex items-center justify-between gap-2">

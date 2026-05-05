@@ -27,6 +27,10 @@ type RiotAccountRow = {
   rank: string | null;
   lp: number | null;
   win_rate: string | number | null;
+  solo_tier: string | null;
+  solo_rank: string | null;
+  solo_lp: number | null;
+  solo_win_rate: string | number | null;
   average_position: string | number | null;
   last_synced_at: string | null;
   routing_platform?: string | null;
@@ -109,7 +113,7 @@ export async function getDashboardSnapshot(viewerId?: string): Promise<Dashboard
     supabase
       .from("group_accounts")
       .select(
-        "id, user_id, is_shared, custom_name, credential_user, credential_psw, riot_accounts(game_name, tag_line, tier, rank, lp, win_rate, average_position, last_synced_at, routing_platform)",
+        "id, user_id, is_shared, custom_name, credential_user, credential_psw, riot_accounts(game_name, tag_line, tier, rank, lp, win_rate, solo_tier, solo_rank, solo_lp, solo_win_rate, average_position, last_synced_at, routing_platform)",
       )
       .eq("group_id", groupId),
     supabase
@@ -149,10 +153,18 @@ export async function getDashboardSnapshot(viewerId?: string): Promise<Dashboard
       accountUser: acc.credential_user ?? null,
       accountPsw: acc.credential_psw ?? null,
       isMain: acc.custom_name?.toLowerCase() === "main",
-      tier: toRankTier(riot.tier || undefined),
-      division: normalizeDivision(riot.rank),
-      lp: riot.lp ?? 0,
-      winRate: numericOrZero(riot.win_rate),
+      flex: {
+        tier: toRankTier(riot.tier || undefined),
+        division: normalizeDivision(riot.rank),
+        lp: riot.lp ?? 0,
+        winRate: numericOrZero(riot.win_rate),
+      },
+      soloDuo: {
+        tier: toRankTier(riot.solo_tier || undefined),
+        division: normalizeDivision(riot.solo_rank),
+        lp: riot.solo_lp ?? 0,
+        winRate: numericOrZero(riot.solo_win_rate),
+      },
       leagueOfGraphsStatus: riot.last_synced_at ? "synced" : "pending",
     };
   };

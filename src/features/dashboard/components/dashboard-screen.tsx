@@ -7,7 +7,7 @@ import { redirect } from "next/navigation";
 import { Panel } from "@/components/ui/panel";
 import { CreateGroupForm } from "@/features/groups/components/create-group-form";
 
-export async function DashboardScreen() {
+export async function DashboardScreen({ queue }: { queue: "flex" | "solo-duo" }) {
   const supabase = await createClient();
   const {
     data: { user },
@@ -48,7 +48,7 @@ export async function DashboardScreen() {
 
   return (
     <AppShell>
-      <DashboardView snapshot={snapshot} />
+      <DashboardView queue={queue} snapshot={snapshot} />
     </AppShell>
   );
 }

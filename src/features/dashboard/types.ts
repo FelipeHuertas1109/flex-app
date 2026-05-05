@@ -23,10 +23,18 @@ export type LeagueAccount = {
   /** Texto guardado (modal: etiqueta Psw). */
   accountPsw: string | null;
   isMain: boolean;
-  tier: RankTier;
-  division: "I" | "II" | "III" | "IV" | null;
-  lp: number;
-  winRate: number;
+  flex: {
+    tier: RankTier;
+    division: "I" | "II" | "III" | "IV" | null;
+    lp: number;
+    winRate: number;
+  };
+  soloDuo: {
+    tier: RankTier;
+    division: "I" | "II" | "III" | "IV" | null;
+    lp: number;
+    winRate: number;
+  };
   leagueOfGraphsStatus: "synced" | "pending" | "stale";
 };
 

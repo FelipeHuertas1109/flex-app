@@ -3,11 +3,12 @@ import type { LeagueAccount } from "@/features/dashboard/types";
 import { cn } from "@/lib/utils";
 
 type RankBadgeProps = {
-  account: LeagueAccount;
+  tier: LeagueAccount["flex"]["tier"];
+  division: LeagueAccount["flex"]["division"];
   className?: string;
 };
 
-const tierLabels: Record<LeagueAccount["tier"], string> = {
+const tierLabels: Record<LeagueAccount["flex"]["tier"], string> = {
   UNRANKED: "Sin rango",
   IRON: "Hierro",
   BRONZE: "Bronce",
@@ -21,7 +22,7 @@ const tierLabels: Record<LeagueAccount["tier"], string> = {
   CHALLENGER: "Challenger",
 };
 
-const tierStyles: Record<LeagueAccount["tier"], string> = {
+const tierStyles: Record<LeagueAccount["flex"]["tier"], string> = {
   UNRANKED:
     "border-slate-500/70 bg-[#1a2635] text-slate-200 shadow-[0_0_0_1px_rgba(148,163,184,0.18),0_0_12px_rgba(148,163,184,0.12),inset_0_1px_0_rgba(255,255,255,0.12)]",
   IRON:
@@ -46,7 +47,7 @@ const tierStyles: Record<LeagueAccount["tier"], string> = {
     "border-cyan-100/90 bg-[#142838] text-white shadow-[0_0_0_1px_rgba(207,250,254,0.25),0_0_16px_rgba(103,232,249,0.2),inset_0_1px_0_rgba(254,240,138,0.18)] font-bold",
 };
 
-const tierEmblems: Partial<Record<LeagueAccount["tier"], string>> = {
+const tierEmblems: Partial<Record<LeagueAccount["flex"]["tier"], string>> = {
   IRON: "/emblem-small/emblem-iron.webp",
   BRONZE: "/emblem-small/emblem-bronze.webp",
   SILVER: "/emblem-small/emblem-silver.webp",
@@ -59,11 +60,11 @@ const tierEmblems: Partial<Record<LeagueAccount["tier"], string>> = {
   CHALLENGER: "/emblem-small/emblem-challenger.webp",
 };
 
-export function RankBadge({ account, className }: RankBadgeProps) {
-  const tierStyle = tierStyles[account.tier] ?? tierStyles.UNRANKED;
-  const tierLabel = tierLabels[account.tier] ?? tierLabels.UNRANKED;
-  const label = (account.division ? `${tierLabel} ${account.division}` : tierLabel).toUpperCase();
-  const emblemSrc = tierEmblems[account.tier];
+export function RankBadge({ tier, division, className }: RankBadgeProps) {
+  const tierStyle = tierStyles[tier] ?? tierStyles.UNRANKED;
+  const tierLabel = tierLabels[tier] ?? tierLabels.UNRANKED;
+  const label = (division ? `${tierLabel} ${division}` : tierLabel).toUpperCase();
+  const emblemSrc = tierEmblems[tier];
 
   return (
     <span
