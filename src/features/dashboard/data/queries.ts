@@ -35,6 +35,7 @@ type RiotAccountRow = {
 type GroupAccountQueryRow = {
   id: string;
   user_id: string;
+  is_shared: boolean | null;
   custom_name: string | null;
   credential_user: string | null;
   credential_psw: string | null;
@@ -107,7 +108,7 @@ export async function getDashboardSnapshot(): Promise<DashboardSnapshot | null> 
 
   const { data: accountsData } = await supabase
     .from("group_accounts")
-    .select("id, user_id, custom_name, credential_user, credential_psw, riot_accounts(*)")
+    .select("id, user_id, is_shared, custom_name, credential_user, credential_psw, riot_accounts(*)")
     .eq("group_id", group.id);
 
   const { data: invitesData } = await supabase
@@ -123,35 +124,38 @@ export async function getDashboardSnapshot(): Promise<DashboardSnapshot | null> 
   );
   const accountRows = (accountsData ?? []) as unknown as GroupAccountQueryRow[];
 
+  const toLeagueAccount = (acc: GroupAccountQueryRow): LeagueAccount | null => {
+    const riotRaw = acc.riot_accounts as RiotAccountRow | RiotAccountRow[] | null | undefined;
+    const riot = Array.isArray(riotRaw) ? riotRaw[0] : riotRaw;
+    if (!riot?.game_name) {
+      return null;
+    }
+
+    const fromPlatform = routingPlatformToRegionLabel(riot.routing_platform);
+    const fromTag = inferRegionFromTagLine(riot.tag_line ?? "");
+    return {
+      id: acc.id,
+      customName: acc.custom_name || null,
+      isShared: Boolean(acc.is_shared),
+      summonerName: riot.game_name,
+      tagLine: riot.tag_line,
+      region: fromPlatform || fromTag,
+      accountUser: acc.credential_user ?? null,
+      accountPsw: acc.credential_psw ?? null,
+      isMain: acc.custom_name?.toLowerCase() === "main",
+      tier: toRankTier(riot.tier || undefined),
+      division: normalizeDivision(riot.rank),
+      lp: riot.lp ?? 0,
+      winRate: numericOrZero(riot.win_rate),
+      leagueOfGraphsStatus: riot.last_synced_at ? "synced" : "pending",
+    };
+  };
+
   const members: GroupMember[] = memberRows.map((m) => {
-    const memberAccountsData = accountRows.filter((acc) => acc.user_id === m.profiles.id);
-
-    const accounts: LeagueAccount[] = memberAccountsData.flatMap((acc) => {
-      const riotRaw = acc.riot_accounts as RiotAccountRow | RiotAccountRow[] | null | undefined;
-      const riot = Array.isArray(riotRaw) ? riotRaw[0] : riotRaw;
-      if (!riot?.game_name) {
-        return [];
-      }
-
-      const fromPlatform = routingPlatformToRegionLabel(riot.routing_platform);
-      const fromTag = inferRegionFromTagLine(riot.tag_line ?? "");
-      return [
-        {
-          id: acc.id,
-          customName: acc.custom_name || null,
-          summonerName: riot.game_name,
-          tagLine: riot.tag_line,
-          region: fromPlatform || fromTag,
-          accountUser: acc.credential_user ?? null,
-          accountPsw: acc.credential_psw ?? null,
-          isMain: acc.custom_name?.toLowerCase() === "main",
-          tier: toRankTier(riot.tier || undefined),
-          division: normalizeDivision(riot.rank),
-          lp: riot.lp ?? 0,
-          winRate: numericOrZero(riot.win_rate),
-          leagueOfGraphsStatus: riot.last_synced_at ? "synced" : "pending",
-        },
-      ];
+    const memberAccountsData = accountRows.filter((acc) => !acc.is_shared && acc.user_id === m.profiles.id);
+    const accounts = memberAccountsData.flatMap((acc) => {
+      const account = toLeagueAccount(acc);
+      return account ? [account] : [];
     });
 
     return {
@@ -161,6 +165,12 @@ export async function getDashboardSnapshot(): Promise<DashboardSnapshot | null> 
       role: toMemberRole(m.role),
       accounts,
     };
+  });
+
+  const sharedAccounts = accountRows.flatMap((acc) => {
+    if (!acc.is_shared) return [];
+    const account = toLeagueAccount(acc);
+    return account ? [account] : [];
   });
 
   const invites: GroupInvite[] = (invitesData ?? []).map((row) => ({
@@ -178,6 +188,7 @@ export async function getDashboardSnapshot(): Promise<DashboardSnapshot | null> 
       createdAt: group.created_at,
     },
     members,
+    sharedAccounts,
     invites,
     viewerInviteAdmin: Boolean(memberRecord.invite_admin),
     viewerIsOwner: memberRecord.role === "owner",

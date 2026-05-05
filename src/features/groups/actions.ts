@@ -149,7 +149,8 @@ export async function removeGroupMember(groupId: string, memberId: string) {
     .from("group_accounts")
     .select("id, riot_account_id")
     .eq("group_id", groupId)
-    .eq("user_id", targetMemberId);
+    .eq("user_id", targetMemberId)
+    .eq("is_shared", false);
 
   if (linkedAccountsError) {
     console.error("removeGroupMember linked accounts:", linkedAccountsError);
@@ -162,7 +163,8 @@ export async function removeGroupMember(groupId: string, memberId: string) {
     .from("group_accounts")
     .delete()
     .eq("group_id", groupId)
-    .eq("user_id", targetMemberId);
+    .eq("user_id", targetMemberId)
+    .eq("is_shared", false);
 
   if (accountsError) {
     console.error("removeGroupMember group_accounts:", accountsError);

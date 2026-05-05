@@ -137,7 +137,7 @@ function AddAccountModal({
             Registrar nueva cuenta
           </h2>
           <p className="mt-2 text-sm leading-relaxed text-slate-400">
-            Riot ID y textos opcionales (User / Psw) que quieras ver en la tabla.
+            Riot ID, propiedad visible y textos opcionales (User / Psw) que quieras ver en la tabla.
           </p>
         </div>
 
@@ -171,6 +171,41 @@ function AddAccountModal({
                   required
                 />
               </div>
+            </fieldset>
+
+            <fieldset className="space-y-3 border-t border-white/10 pt-5">
+              <legend className="text-[11px] font-black uppercase tracking-[0.18em] text-cyan-300/90">
+                Propiedad visible
+              </legend>
+              <label className="flex cursor-pointer gap-3 rounded-xl border border-cyan-200/12 bg-black/26 p-3 text-sm text-slate-300 transition hover:border-cyan-300/30 hover:bg-cyan-400/8">
+                <input
+                  className="mt-1 size-4 accent-cyan-300"
+                  defaultChecked
+                  name="ownershipMode"
+                  type="radio"
+                  value="owned"
+                />
+                <span>
+                  <span className="block font-bold text-white">Cuenta propia</span>
+                  <span className="mt-0.5 block text-xs leading-5 text-slate-400">
+                    Se mostrara bajo tu usuario en miembros y leaderboard.
+                  </span>
+                </span>
+              </label>
+              <label className="flex cursor-pointer gap-3 rounded-xl border border-cyan-200/12 bg-black/26 p-3 text-sm text-slate-300 transition hover:border-cyan-300/30 hover:bg-cyan-400/8">
+                <input
+                  className="mt-1 size-4 accent-cyan-300"
+                  name="ownershipMode"
+                  type="radio"
+                  value="shared"
+                />
+                <span>
+                  <span className="block font-bold text-white">Cuenta compartida / sin dueno</span>
+                  <span className="mt-0.5 block text-xs leading-5 text-slate-400">
+                    Queda registrada por ti, pero se muestra como cuenta sin dueno visual.
+                  </span>
+                </span>
+              </label>
             </fieldset>
 
             <fieldset className="space-y-4 border-t border-white/10 pt-5">

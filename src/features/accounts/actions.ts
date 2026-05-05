@@ -80,6 +80,7 @@ async function getAuthorizedGroupAccount(groupAccountId: string) {
 export async function addAccount(groupId: string, formData: FormData) {
   const gameName = (formData.get("gameName") as string)?.trim();
   const tagLine = (formData.get("tagLine") as string)?.trim().toUpperCase();
+  const isShared = formData.get("ownershipMode") === "shared";
   const accountUser = (formData.get("accountUser") as string)?.trim() ?? "";
   const accountPsw = (formData.get("accountPsw") as string)?.trim() ?? "";
 
@@ -141,6 +142,7 @@ export async function addAccount(groupId: string, formData: FormData) {
   const { error } = await adminSupabase.from("group_accounts").insert({
     group_id: groupId,
     user_id: user.id,
+    is_shared: isShared,
     riot_account_id: riotAccountId,
     custom_name: null,
     credential_user: accountUser || null,
@@ -160,11 +162,12 @@ export async function addAccount(groupId: string, formData: FormData) {
     }
     if (
       error.code === "42703" ||
-      (typeof error.message === "string" && error.message.includes("credential_"))
+      (typeof error.message === "string" &&
+        (error.message.includes("credential_") || error.message.includes("is_shared")))
     ) {
       return {
         error:
-          "Faltan columnas credential_user/credential_psw en la base de datos. Ejecuta la migracion Supabase correspondiente.",
+          "Faltan columnas de cuentas en la base de datos. Ejecuta las migraciones Supabase correspondientes.",
       };
     }
     return { error: "Error al agregar cuenta" };
@@ -234,6 +237,7 @@ export async function syncAllAccounts(groupId: string) {
 
 export async function updateAccount(groupAccountId: string, formData: FormData) {
   const ownerId = (formData.get("ownerId") as string)?.trim();
+  const isShared = ownerId === "__shared__";
   const accountUser = (formData.get("accountUser") as string)?.trim() ?? "";
   const accountPsw = (formData.get("accountPsw") as string)?.trim() ?? "";
   if (!ownerId) return { error: "Selecciona un dueno valido" };
@@ -242,15 +246,17 @@ export async function updateAccount(groupAccountId: string, formData: FormData) 
   if ("error" in authCheck) return { error: authCheck.error };
   const { groupAccount } = authCheck;
 
-  const supabase = await createClient();
-  const { data: ownerMembership } = await supabase
-    .from("group_members")
-    .select("id")
-    .eq("group_id", groupAccount.group_id)
-    .eq("user_id", ownerId)
-    .single();
+  if (!isShared) {
+    const supabase = await createClient();
+    const { data: ownerMembership } = await supabase
+      .from("group_members")
+      .select("id")
+      .eq("group_id", groupAccount.group_id)
+      .eq("user_id", ownerId)
+      .single();
 
-  if (!ownerMembership) return { error: "El dueno debe pertenecer al grupo" };
+    if (!ownerMembership) return { error: "El dueno debe pertenecer al grupo" };
+  }
 
   let adminSupabase;
   try {
@@ -262,7 +268,8 @@ export async function updateAccount(groupAccountId: string, formData: FormData) 
   const { error } = await adminSupabase
     .from("group_accounts")
     .update({
-      user_id: ownerId,
+      ...(isShared ? {} : { user_id: ownerId }),
+      is_shared: isShared,
       credential_user: accountUser || null,
       credential_psw: accountPsw || null,
     })

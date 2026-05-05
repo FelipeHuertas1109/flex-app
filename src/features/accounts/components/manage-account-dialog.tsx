@@ -14,6 +14,7 @@ type MemberOption = {
 type ManageAccountDialogProps = {
   groupAccountId: string;
   currentOwnerId: string;
+  currentIsShared: boolean;
   currentAccountUser: string;
   currentAccountPsw: string;
   members: MemberOption[];
@@ -22,6 +23,7 @@ type ManageAccountDialogProps = {
 export function ManageAccountDialog({
   groupAccountId,
   currentOwnerId,
+  currentIsShared,
   currentAccountUser,
   currentAccountPsw,
   members,
@@ -102,7 +104,7 @@ export function ManageAccountDialog({
             <h3 id={`edit-account-title-${groupAccountId}`} className="pr-10 text-lg font-black tracking-tight text-white sm:text-xl">
               Editar cuenta
             </h3>
-            <p className="mt-2 text-sm leading-relaxed text-slate-400">Dueño del registro en el grupo y textos opcionales (User / Psw).</p>
+            <p className="mt-2 text-sm leading-relaxed text-slate-400">Propiedad visible en el grupo y textos opcionales (User / Psw).</p>
           </div>
 
           <div className="max-h-[min(30rem,calc(100vh-10rem))] overflow-y-auto overscroll-contain px-5 py-5 sm:px-6 sm:py-6">
@@ -111,9 +113,10 @@ export function ManageAccountDialog({
                 <label className="block text-sm font-semibold text-slate-300">Dueno</label>
                 <select
                   className={`${inputBase} cursor-pointer`}
-                  defaultValue={currentOwnerId}
+                  defaultValue={currentIsShared ? "__shared__" : currentOwnerId}
                   name="ownerId"
                 >
+                  <option value="__shared__">Cuenta compartida / sin dueno</option>
                   {members.map((member) => (
                     <option key={member.id} value={member.id}>
                       {member.name}

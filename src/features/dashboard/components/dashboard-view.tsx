@@ -24,7 +24,7 @@ type DashboardViewProps = {
 };
 
 type AccountWithMember = LeagueAccount & {
-  member: GroupMember;
+  member: GroupMember | null;
 };
 
 type MemberOption = {
@@ -121,9 +121,14 @@ function flexLeaderboardSortScore(account: LeagueAccount): number {
 }
 
 export function DashboardView({ snapshot }: DashboardViewProps) {
-  const accounts = snapshot.members.flatMap((member) =>
+  const memberAccounts = snapshot.members.flatMap((member) =>
     member.accounts.map((account) => ({ ...account, member })),
   );
+  const sharedAccounts = snapshot.sharedAccounts.map((account) => ({
+    ...account,
+    member: null,
+  }));
+  const accounts = [...memberAccounts, ...sharedAccounts];
   const sortedAccounts = [...accounts].sort((left, right) => flexLeaderboardSortScore(right) - flexLeaderboardSortScore(left));
   const leaderLp = sortedAccounts[0]?.lp ?? 0;
   const memberOptions = snapshot.members.map((member) => ({
@@ -199,6 +204,7 @@ export function DashboardView({ snapshot }: DashboardViewProps) {
           canManageMembers={snapshot.viewerCanManageMembers}
           groupId={snapshot.group.id}
           members={snapshot.members}
+          sharedAccountsCount={snapshot.sharedAccounts.length}
           viewerId={snapshot.viewerId}
         />
       </section>
@@ -318,11 +324,13 @@ function MembersScrollPanel({
   canManageMembers,
   groupId,
   members,
+  sharedAccountsCount,
   viewerId,
 }: {
   canManageMembers: boolean;
   groupId: string;
   members: GroupMember[];
+  sharedAccountsCount: number;
   viewerId: string;
 }) {
   return (
@@ -331,13 +339,27 @@ function MembersScrollPanel({
         <div className="flex items-start justify-between gap-3">
           <div>
             <h2 className="text-lg font-black text-white">Miembros</h2>
-            <p className="mt-1 text-xs text-slate-400">Cuentas asociadas por persona.</p>
+            <p className="mt-1 text-xs text-slate-400">Cuentas asociadas por persona y compartidas.</p>
           </div>
           <Badge tone="neutral">{members.length}</Badge>
         </div>
       </div>
       <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-5 py-4">
         <div className="divide-y divide-cyan-200/10">
+          {sharedAccountsCount > 0 ? (
+            <div className="flex items-center justify-between gap-3 pb-3">
+              <div className="flex min-w-0 items-center gap-2.5">
+                <div className="flex size-9 shrink-0 items-center justify-center rounded-xl border border-amber-300/28 bg-amber-400/12 text-xs font-black text-amber-200 shadow-lg shadow-amber-500/10">
+                  S
+                </div>
+                <div className="min-w-0">
+                  <p className="truncate text-sm font-bold text-white">Sin dueno</p>
+                  <p className="truncate text-xs text-slate-500">Cuentas compartidas del grupo</p>
+                </div>
+              </div>
+              <Badge tone="gold">{sharedAccountsCount} cuentas</Badge>
+            </div>
+          ) : null}
           {members.map((member) => {
             const canRemoveMember = canManageMembers && member.role !== "owner" && member.id !== viewerId;
 
@@ -468,7 +490,8 @@ function LeaderboardRow({
         <ManageAccountDialog
           currentAccountPsw={account.accountPsw ?? ""}
           currentAccountUser={account.accountUser ?? ""}
-          currentOwnerId={account.member.id}
+          currentIsShared={account.isShared}
+          currentOwnerId={account.member?.id ?? ""}
           groupAccountId={account.id}
           members={memberOptions}
         />
@@ -525,7 +548,8 @@ function LeaderboardCard({
         <ManageAccountDialog
           currentAccountPsw={account.accountPsw ?? ""}
           currentAccountUser={account.accountUser ?? ""}
-          currentOwnerId={account.member.id}
+          currentIsShared={account.isShared}
+          currentOwnerId={account.member?.id ?? ""}
           groupAccountId={account.id}
           members={memberOptions}
         />
@@ -534,7 +558,7 @@ function LeaderboardCard({
   );
 }
 
-function MemberIdentity({ member, rank }: { member: GroupMember; rank: number }) {
+function MemberIdentity({ member, rank }: { member: GroupMember | null; rank: number }) {
   const badgeStyle =
     rank === 1
       ? "bg-linear-to-br from-amber-300 via-amber-400 to-amber-700 text-amber-950 border-amber-100/70 shadow-amber-400/40"
@@ -559,8 +583,10 @@ function MemberIdentity({ member, rank }: { member: GroupMember; rank: number })
         <PlayerCrest rank={rank} />
       </div>
       <div className="min-w-0">
-        <div className="truncate font-black text-white">{member.name}</div>
-        <div className="mt-0.5 truncate text-xs font-medium text-slate-400">{formatRole(member.role)}</div>
+        <div className="truncate font-black text-white">{member?.name ?? "Sin dueno"}</div>
+        <div className="mt-0.5 truncate text-xs font-medium text-slate-400">
+          {member ? formatRole(member.role) : "Cuenta compartida"}
+        </div>
       </div>
     </div>
   );
@@ -583,6 +609,11 @@ function LeaderboardAccountIdentity({ account }: { account: AccountWithMember })
         </div>
       ) : null}
       <div className="mt-2">
+        {account.isShared ? (
+          <Badge className="mr-1.5" tone="gold">
+            Compartida
+          </Badge>
+        ) : null}
         <Badge tone={statusTone[account.leagueOfGraphsStatus]}>
           {statusLabel[account.leagueOfGraphsStatus]}
         </Badge>

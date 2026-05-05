@@ -14,6 +14,7 @@ export type RankTier =
 export type LeagueAccount = {
   id: string;
   customName: string | null;
+  isShared: boolean;
   summonerName: string;
   tagLine: string;
   region: string;
@@ -52,6 +53,7 @@ export type DashboardSnapshot = {
     createdAt: string;
   };
   members: GroupMember[];
+  sharedAccounts: LeagueAccount[];
   invites: GroupInvite[];
   /** Admin de invitaciones (columna invite_admin en group_members); solo ese rol usa "Invitar miembro". */
   viewerInviteAdmin: boolean;
