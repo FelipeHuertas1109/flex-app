@@ -35,6 +35,9 @@ type MemberOption = {
 };
 type QueueFilter = "solo" | "flex";
 
+const DEFAULT_QUEUE_FILTER: QueueFilter =
+  process.env.NEXT_PUBLIC_DASHBOARD_DEFAULT_QUEUE?.toLowerCase() === "solo" ? "solo" : "flex";
+
 type Accent = "teal" | "indigo" | "gold" | "danger";
 type StatIconName = "members" | "accounts" | "crown";
 
@@ -112,7 +115,7 @@ function flexLeaderboardSortScore(account: LeagueAccount): number {
 }
 
 export function DashboardView({ snapshot }: DashboardViewProps) {
-  const [queueFilter, setQueueFilter] = useState<QueueFilter>("flex");
+  const [queueFilter, setQueueFilter] = useState<QueueFilter>(DEFAULT_QUEUE_FILTER);
   const accounts = useMemo(() => {
     const memberAccounts = snapshot.members.flatMap((member) =>
       member.accounts.map((account) => ({ ...account, member })),
