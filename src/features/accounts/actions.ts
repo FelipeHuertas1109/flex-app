@@ -26,10 +26,14 @@ async function syncRiotAccountById(
     .update({
       game_name: stats.gameName,
       tag_line: stats.tagLine,
-      tier: stats.tier,
-      rank: stats.rank,
-      lp: stats.lp,
-      win_rate: stats.winRate,
+      tier: stats.flex.tier,
+      rank: stats.flex.rank,
+      lp: stats.flex.lp,
+      win_rate: stats.flex.winRate,
+      solo_tier: stats.soloDuo.tier,
+      solo_rank: stats.soloDuo.rank,
+      solo_lp: stats.soloDuo.lp,
+      solo_win_rate: stats.soloDuo.winRate,
       routing_platform: stats.routingPlatform ?? null,
       last_synced_at: new Date().toISOString(),
     })

@@ -1,12 +1,17 @@
 export interface AccountStats {
   gameName: string;
   tagLine: string;
+  flex: QueueStats;
+  soloDuo: QueueStats;
+  /** Shard LoL donde se resolvieron ligas (ej la1 la2). */
+  routingPlatform?: string | null;
+}
+
+export interface QueueStats {
   tier: string | null;
   rank: string | null;
   lp: number;
   winRate: number;
-  /** Shard LoL donde se resolvieron ligas (ej la1 la2). */
-  routingPlatform?: string | null;
 }
 
 const REGION_ROUTING = "americas"; // Para Account-V1
@@ -48,6 +53,27 @@ type LeagueEntry = {
   wins: number;
   losses: number;
 };
+
+const EMPTY_QUEUE_STATS: QueueStats = {
+  tier: "UNRANKED",
+  rank: null,
+  lp: 0,
+  winRate: 0,
+};
+
+function toQueueStats(entry: LeagueEntry | undefined): QueueStats {
+  if (!entry) return EMPTY_QUEUE_STATS;
+  const wins = entry.wins || 0;
+  const losses = entry.losses || 0;
+  const totalGames = wins + losses;
+  const winRate = totalGames > 0 ? Math.round((wins / totalGames) * 100) : 0;
+  return {
+    tier: entry.tier ?? "UNRANKED",
+    rank: entry.rank ?? null,
+    lp: entry.leaguePoints ?? 0,
+    winRate,
+  };
+}
 
 function getPlatformCandidates(tagLine: string) {
   const normalizedTag = tagLine.toUpperCase();
@@ -100,20 +126,13 @@ export async function fetchRiotAccountStats(
 
       const entries: LeagueEntry[] = await leagueRes.json();
       const flexStats = entries.find((q) => q.queueType === "RANKED_FLEX_SR");
-
-      if (flexStats) {
-        const wins = flexStats.wins || 0;
-        const losses = flexStats.losses || 0;
-        const totalGames = wins + losses;
-        const winRate = totalGames > 0 ? Math.round((wins / totalGames) * 100) : 0;
-
+      const soloDuoStats = entries.find((q) => q.queueType === "RANKED_SOLO_5x5");
+      if (flexStats || soloDuoStats) {
         return {
           gameName: accountData.gameName,
           tagLine: accountData.tagLine,
-          tier: flexStats.tier,
-          rank: flexStats.rank,
-          lp: flexStats.leaguePoints,
-          winRate,
+          flex: toQueueStats(flexStats),
+          soloDuo: toQueueStats(soloDuoStats),
           routingPlatform: candidate,
         };
       }
@@ -127,10 +146,8 @@ export async function fetchRiotAccountStats(
       return {
         gameName: accountData.gameName,
         tagLine: accountData.tagLine,
-        tier: "UNRANKED",
-        rank: null,
-        lp: 0,
-        winRate: 0,
+        flex: EMPTY_QUEUE_STATS,
+        soloDuo: EMPTY_QUEUE_STATS,
         routingPlatform: bestNonEmpty.platform,
       };
     }
@@ -138,10 +155,8 @@ export async function fetchRiotAccountStats(
     return {
       gameName: accountData.gameName,
       tagLine: accountData.tagLine,
-      tier: "UNRANKED",
-      rank: null,
-      lp: 0,
-      winRate: 0,
+      flex: EMPTY_QUEUE_STATS,
+      soloDuo: EMPTY_QUEUE_STATS,
       routingPlatform: null,
     };
 

@@ -1,0 +1,5 @@
+ALTER TABLE public.riot_accounts
+  ADD COLUMN IF NOT EXISTS solo_tier TEXT,
+  ADD COLUMN IF NOT EXISTS solo_rank TEXT,
+  ADD COLUMN IF NOT EXISTS solo_lp INTEGER,
+  ADD COLUMN IF NOT EXISTS solo_win_rate NUMERIC;
