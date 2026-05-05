@@ -12,6 +12,7 @@ export interface QueueStats {
   rank: string | null;
   lp: number;
   winRate: number;
+  totalGames: number;
 }
 
 const REGION_ROUTING = "americas"; // Para Account-V1
@@ -59,6 +60,7 @@ const EMPTY_QUEUE_STATS: QueueStats = {
   rank: null,
   lp: 0,
   winRate: 0,
+  totalGames: 0,
 };
 
 function toQueueStats(entry: LeagueEntry | undefined): QueueStats {
@@ -72,6 +74,7 @@ function toQueueStats(entry: LeagueEntry | undefined): QueueStats {
     rank: entry.rank ?? null,
     lp: entry.leaguePoints ?? 0,
     winRate,
+    totalGames,
   };
 }
 

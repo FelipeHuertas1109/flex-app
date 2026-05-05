@@ -30,10 +30,12 @@ async function syncRiotAccountById(
       rank: stats.flex.rank,
       lp: stats.flex.lp,
       win_rate: stats.flex.winRate,
+      total_games: stats.flex.totalGames,
       solo_tier: stats.soloDuo.tier,
       solo_rank: stats.soloDuo.rank,
       solo_lp: stats.soloDuo.lp,
       solo_win_rate: stats.soloDuo.winRate,
+      solo_total_games: stats.soloDuo.totalGames,
       routing_platform: stats.routingPlatform ?? null,
       last_synced_at: new Date().toISOString(),
     })

@@ -28,12 +28,14 @@ export type LeagueAccount = {
     division: "I" | "II" | "III" | "IV" | null;
     lp: number;
     winRate: number;
+    totalGames: number;
   };
   soloDuo: {
     tier: RankTier;
     division: "I" | "II" | "III" | "IV" | null;
     lp: number;
     winRate: number;
+    totalGames: number;
   };
   leagueOfGraphsStatus: "synced" | "pending" | "stale";
 };

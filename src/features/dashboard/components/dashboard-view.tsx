@@ -223,7 +223,7 @@ export function DashboardView({ snapshot, queue }: DashboardViewProps) {
           {sortedAccounts.length > 0 ? (
             <>
               <div className="hidden overflow-x-auto p-4 md:block">
-                <table className="w-full min-w-[1120px] border-separate border-spacing-y-1 text-left">
+                <table className="w-full min-w-[1200px] border-separate border-spacing-y-1 text-left">
                   <thead className="text-[11px] uppercase tracking-[0.08em] text-slate-300/85">
                     <tr>
                       <th className="w-[4.75rem] px-4 py-3 text-center font-black">#</th>
@@ -231,6 +231,7 @@ export function DashboardView({ snapshot, queue }: DashboardViewProps) {
                       <th className="px-4 py-3 font-black">Riot ID</th>
                       <th className="px-4 py-3 font-black">Rango</th>
                       <th className="px-4 py-3 text-center font-black">LP</th>
+                      <th className="whitespace-nowrap px-4 py-3 text-center font-black">Partidas</th>
                       <th className="whitespace-nowrap px-4 py-3 text-center font-black">Win rate</th>
                       <th className="px-4 py-3 font-black">Usuario</th>
                       <th className="px-4 py-3 font-black">Contraseña</th>
@@ -495,6 +496,9 @@ function LeaderboardRow({
       <td className="px-4 py-5 text-center font-mono text-sm font-black text-white">
         {queueStats.lp}
       </td>
+      <td className="px-4 py-5 text-center font-mono text-sm font-black text-slate-100">
+        {queueStats.totalGames}
+      </td>
       <td className={cn("px-4 py-5 text-center text-sm font-black", winRateTone(queueStats.winRate))}>
         {queueStats.winRate}%
       </td>
@@ -551,6 +555,7 @@ function LeaderboardCard({
       </div>
       <div className="mt-4 grid min-w-0 grid-cols-2 gap-2 sm:gap-3">
         <MetricPill label="LP" value={queueStats.lp.toString()} />
+        <MetricPill label="Partidas" value={queueStats.totalGames.toString()} />
         <MetricPill label="Win rate" value={`${queueStats.winRate}%`} />
       </div>
       <div className="mt-4 grid min-w-0 gap-2 rounded-lg border border-cyan-200/12 bg-black/22 p-3">
