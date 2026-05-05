@@ -1,4 +1,4 @@
-import { Badge } from "@/components/ui/badge";
+import Image from "next/image";
 import type { LeagueAccount } from "@/features/dashboard/types";
 import { cn } from "@/lib/utils";
 
@@ -21,27 +21,70 @@ const tierLabels: Record<LeagueAccount["tier"], string> = {
 };
 
 const tierStyles: Record<LeagueAccount["tier"], string> = {
-  UNRANKED: "border-slate-500/22 bg-slate-700/16 text-slate-300",
-  IRON:     "border-slate-400/25 bg-slate-500/12 text-slate-300",
-  BRONZE:   "border-orange-400/25 bg-orange-500/12 text-orange-200",
-  SILVER:   "border-slate-200/25 bg-slate-200/12 text-slate-100",
-  GOLD:     "border-amber-300/35 bg-amber-400/14 text-amber-200 font-bold",
-  PLATINUM: "border-cyan-300/35 bg-cyan-400/12 text-cyan-200 font-bold",
-  EMERALD:  "border-emerald-300/35 bg-emerald-400/12 text-emerald-200 font-bold",
-  DIAMOND:  "border-violet-300/35 bg-violet-500/14 text-violet-100 font-bold",
-  MASTER:   "border-fuchsia-300/35 bg-fuchsia-500/14 text-fuchsia-100 font-bold",
-  GRANDMASTER: "border-rose-300/35 bg-rose-500/14 text-rose-100 font-bold",
-  CHALLENGER: "border-cyan-200/38 bg-linear-to-br from-cyan-300/25 to-amber-300/22 text-white font-bold",
+  UNRANKED:
+    "border-slate-500/70 bg-[#1a2635] text-slate-200 shadow-[0_0_0_1px_rgba(148,163,184,0.18),0_0_12px_rgba(148,163,184,0.12),inset_0_1px_0_rgba(255,255,255,0.12)]",
+  IRON:
+    "border-zinc-400/75 bg-[#1f252b] text-zinc-100 shadow-[0_0_0_1px_rgba(161,161,170,0.2),0_0_12px_rgba(161,161,170,0.12),inset_0_1px_0_rgba(255,255,255,0.12)]",
+  BRONZE:
+    "border-orange-500/80 bg-[#2b211a] text-orange-100 shadow-[0_0_0_1px_rgba(249,115,22,0.2),0_0_14px_rgba(249,115,22,0.16),inset_0_1px_0_rgba(251,146,60,0.18)]",
+  SILVER:
+    "border-slate-300/78 bg-[#1c2734] text-slate-100 shadow-[0_0_0_1px_rgba(203,213,225,0.2),0_0_14px_rgba(203,213,225,0.14),inset_0_1px_0_rgba(226,232,240,0.2)]",
+  GOLD:
+    "border-amber-400/85 bg-[#2d2418] text-amber-100 shadow-[0_0_0_1px_rgba(245,184,63,0.25),0_0_15px_rgba(245,184,63,0.2),inset_0_1px_0_rgba(255,216,107,0.22)] font-bold",
+  PLATINUM:
+    "border-cyan-300/80 bg-[#152934] text-cyan-100 shadow-[0_0_0_1px_rgba(103,232,249,0.22),0_0_14px_rgba(103,232,249,0.16),inset_0_1px_0_rgba(165,243,252,0.18)] font-bold",
+  EMERALD:
+    "border-emerald-400/82 bg-[#142b28] text-emerald-100 shadow-[0_0_0_1px_rgba(52,211,153,0.24),0_0_15px_rgba(52,211,153,0.18),inset_0_1px_0_rgba(110,231,183,0.2)] font-bold",
+  DIAMOND:
+    "border-sky-300/85 bg-[#17233d] text-sky-100 shadow-[0_0_0_1px_rgba(125,211,252,0.24),0_0_15px_rgba(125,211,252,0.18),inset_0_1px_0_rgba(186,230,253,0.2)] font-bold",
+  MASTER:
+    "border-fuchsia-300/82 bg-[#2b1838] text-fuchsia-100 shadow-[0_0_0_1px_rgba(240,171,252,0.23),0_0_15px_rgba(240,171,252,0.18),inset_0_1px_0_rgba(245,208,254,0.2)] font-bold",
+  GRANDMASTER:
+    "border-rose-300/82 bg-[#331824] text-rose-100 shadow-[0_0_0_1px_rgba(253,164,175,0.24),0_0_15px_rgba(253,164,175,0.18),inset_0_1px_0_rgba(254,205,211,0.2)] font-bold",
+  CHALLENGER:
+    "border-cyan-100/90 bg-[#142838] text-white shadow-[0_0_0_1px_rgba(207,250,254,0.25),0_0_16px_rgba(103,232,249,0.2),inset_0_1px_0_rgba(254,240,138,0.18)] font-bold",
+};
+
+const tierEmblems: Partial<Record<LeagueAccount["tier"], string>> = {
+  IRON: "/emblem/emblem-iron.png",
+  BRONZE: "/emblem/emblem-bronze.png",
+  SILVER: "/emblem/emblem-silver.png",
+  GOLD: "/emblem/emblem-gold.png",
+  PLATINUM: "/emblem/emblem-platinum.png",
+  EMERALD: "/emblem/emblem-emerald.png",
+  DIAMOND: "/emblem/emblem-diamond.png",
+  MASTER: "/emblem/emblem-master.png",
+  GRANDMASTER: "/emblem/emblem-grandmaster.png",
+  CHALLENGER: "/emblem/emblem-challenger.png",
 };
 
 export function RankBadge({ account }: RankBadgeProps) {
   const tierStyle = tierStyles[account.tier] ?? tierStyles.UNRANKED;
   const tierLabel = tierLabels[account.tier] ?? tierLabels.UNRANKED;
-  const label = account.division ? `${tierLabel} ${account.division}` : tierLabel;
+  const label = (account.division ? `${tierLabel} ${account.division}` : tierLabel).toUpperCase();
+  const emblemSrc = tierEmblems[account.tier];
 
   return (
-    <Badge className={cn("h-8 px-3 shadow-lg shadow-black/20", tierStyle)}>
+    <span
+      className={cn(
+        "inline-flex h-8 items-center gap-1.5 rounded-md border px-2.5 text-[11px] font-black leading-none tracking-[0.03em]",
+        tierStyle,
+      )}
+    >
+      {emblemSrc ? (
+        <span className="relative size-7 shrink-0 overflow-hidden">
+          <Image
+            alt=""
+            aria-hidden="true"
+            className="absolute left-1/2 top-1/2 h-auto w-28 max-w-none -translate-x-1/2 -translate-y-1/2 object-contain drop-shadow-[0_0_7px_currentColor]"
+            height={63}
+            priority={false}
+            src={emblemSrc}
+            width={112}
+          />
+        </span>
+      ) : null}
       {label}
-    </Badge>
+    </span>
   );
 }

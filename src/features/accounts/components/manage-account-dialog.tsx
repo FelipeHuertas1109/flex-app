@@ -180,7 +180,16 @@ export function ManageAccountDialog({
 
   return (
     <>
-      <Button className="h-8 px-3 text-xs" variant="secondary" onClick={() => setIsOpen(true)}>
+      <Button
+        className={cn(
+          "h-11 min-w-24 px-4 text-xs",
+          currentIsShared
+            ? "border-amber-300/45 bg-amber-400/8 text-amber-100 hover:border-amber-200/70 hover:bg-amber-400/14"
+            : "border-cyan-300/40 bg-cyan-400/8 text-cyan-100 hover:border-cyan-200/65 hover:bg-cyan-400/14",
+        )}
+        variant="secondary"
+        onClick={() => setIsOpen(true)}
+      >
         Editar
       </Button>
       {typeof document !== "undefined" && modal ? createPortal(modal, document.body) : null}

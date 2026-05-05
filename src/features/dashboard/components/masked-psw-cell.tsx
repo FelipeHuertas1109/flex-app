@@ -16,11 +16,11 @@ export function MaskedPswTableCell({ value }: MaskedPswTableCellProps) {
   const [visible, setVisible] = useState(false);
 
   return (
-    <td className="border-b border-cyan-200/10 px-5 py-4">
-      <div className={cn("flex max-w-[16rem] flex-wrap items-center gap-2")}>
+    <td className="px-4 py-5">
+      <div className={cn("flex max-w-[12rem] items-center gap-2")}>
         <span
           className={cn(
-            "min-w-0 flex-1 truncate font-mono text-xs tabular-nums text-white",
+            "min-w-0 flex-1 truncate font-mono text-xs font-black tabular-nums text-white",
             !visible && raw && "tracking-widest text-slate-300",
           )}
           title={visible ? raw : undefined}
@@ -30,16 +30,17 @@ export function MaskedPswTableCell({ value }: MaskedPswTableCellProps) {
         {raw ? (
           <>
             <button
-              className="shrink-0 rounded-md border border-white/14 bg-black/35 px-2 py-1 text-[10px] font-black uppercase tracking-wide text-slate-300 transition hover:border-cyan-400/35 hover:text-white"
+              aria-label={visible ? "Ocultar Psw" : "Ver Psw"}
+              className="inline-flex size-8 shrink-0 items-center justify-center rounded-md border border-white/14 bg-black/35 text-slate-300 transition hover:border-cyan-400/35 hover:text-white"
               onClick={() => setVisible((v) => !v)}
               type="button"
             >
-              {visible ? "Ocultar" : "Ver"}
+              <EyeIcon className="size-4" />
             </button>
-            <CopyChip ariaLabel="Copiar valor Psw" value={raw} />
+            <CopyChip ariaLabel="Copiar valor Psw" compact value={raw} />
           </>
         ) : (
-          <CopyChip ariaLabel="Copiar valor Psw" value="" />
+          <CopyChip ariaLabel="Copiar valor Psw" compact value="" />
         )}
       </div>
     </td>
@@ -81,5 +82,23 @@ export function MaskedPswCardBlock({ value }: MaskedPswTableCellProps) {
         {raw ? (visible ? raw : MASK) : "—"}
       </p>
     </>
+  );
+}
+
+function EyeIcon({ className }: { className?: string }) {
+  return (
+    <svg
+      aria-hidden="true"
+      className={className}
+      fill="none"
+      stroke="currentColor"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      strokeWidth="2"
+      viewBox="0 0 24 24"
+    >
+      <path d="M2.8 12s3.25-6 9.2-6 9.2 6 9.2 6-3.25 6-9.2 6-9.2-6-9.2-6Z" />
+      <path d="M12 15.1a3.1 3.1 0 1 0 0-6.2 3.1 3.1 0 0 0 0 6.2Z" />
+    </svg>
   );
 }

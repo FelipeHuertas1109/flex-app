@@ -35,18 +35,6 @@ type MemberOption = {
 type Accent = "teal" | "indigo" | "gold" | "danger";
 type StatIconName = "members" | "accounts" | "crown";
 
-const statusTone: Record<LeagueAccount["leagueOfGraphsStatus"], "teal" | "gold" | "danger"> = {
-  synced: "teal",
-  pending: "gold",
-  stale: "danger",
-};
-
-const statusLabel: Record<LeagueAccount["leagueOfGraphsStatus"], string> = {
-  synced: "Sincronizado",
-  pending: "Pendiente",
-  stale: "Por actualizar",
-};
-
 const accentStyles: Record<
   Accent,
   {
@@ -230,18 +218,19 @@ export function DashboardView({ snapshot }: DashboardViewProps) {
 
           {sortedAccounts.length > 0 ? (
             <>
-              <div className="hidden overflow-x-auto p-5 md:block">
-                <table className="w-full min-w-[1020px] border-separate border-spacing-0 overflow-hidden rounded-xl border border-cyan-200/12 bg-[#071327]/72 text-left shadow-inner shadow-black/35">
-                  <thead className="bg-black/24 text-xs uppercase tracking-[0.12em] text-slate-400">
+              <div className="hidden overflow-x-auto p-4 md:block">
+                <table className="w-full min-w-[1120px] border-separate border-spacing-y-1 text-left">
+                  <thead className="text-[11px] uppercase tracking-[0.08em] text-slate-300/85">
                     <tr>
-                      <th className="px-5 py-4 font-black">Jugador</th>
-                      <th className="px-5 py-4 font-black">Cuenta</th>
-                      <th className="px-5 py-4 font-black">Rango</th>
-                      <th className="px-5 py-4 font-black">LP</th>
-                      <th className="px-5 py-4 font-black">Win rate</th>
-                      <th className="px-5 py-4 font-black">User</th>
-                      <th className="px-5 py-4 font-black">Psw</th>
-                      <th className="whitespace-nowrap px-5 py-4 text-end font-black">Acciones</th>
+                      <th className="w-[4.75rem] px-4 py-3 text-center font-black">#</th>
+                      <th className="px-4 py-3 font-black">Propietario</th>
+                      <th className="px-4 py-3 font-black">Riot ID</th>
+                      <th className="px-4 py-3 font-black">Rango</th>
+                      <th className="px-4 py-3 text-center font-black">LP</th>
+                      <th className="whitespace-nowrap px-4 py-3 text-center font-black">Win rate</th>
+                      <th className="px-4 py-3 font-black">Usuario</th>
+                      <th className="px-4 py-3 font-black">Contraseña</th>
+                      <th className="whitespace-nowrap px-4 py-3 text-end font-black">Acciones</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -255,6 +244,10 @@ export function DashboardView({ snapshot }: DashboardViewProps) {
                     ))}
                   </tbody>
                 </table>
+                <p className="mt-2 flex items-center justify-center gap-1.5 text-xs font-medium text-slate-400">
+                  <ShieldTinyIcon className="size-3.5 text-amber-300" />
+                  Las cuentas compartidas son accesibles por varios miembros del equipo.
+                </p>
               </div>
               <div className="grid gap-3 p-4 md:hidden">
                 {sortedAccounts.map((account, index) => (
@@ -439,13 +432,20 @@ function StatIcon({ className, name }: { className?: string; name: StatIconName 
   );
 }
 
+function winRateTone(winRate: number) {
+  if (winRate >= 70) return "text-emerald-300";
+  if (winRate >= 55) return "text-amber-300";
+  if (winRate > 0) return "text-cyan-100";
+  return "text-rose-400";
+}
+
 function CredentialCell({ copyLabel, value }: { copyLabel: string; value: string | null }) {
   const text = value?.trim() ?? "";
   return (
-    <td className="border-b border-cyan-200/10 px-5 py-4">
-      <div className="flex max-w-[13rem] items-center gap-2">
-        <span className="min-w-0 flex-1 truncate font-mono text-xs text-white">{text || "—"}</span>
-        <CopyChip ariaLabel={copyLabel} value={text} />
+    <td className="px-4 py-5">
+      <div className="flex max-w-[12rem] items-center gap-2">
+        <span className="min-w-0 flex-1 truncate font-mono text-xs font-black text-slate-100">{text || "—"}</span>
+        <CopyChip ariaLabel={copyLabel} compact value={text} />
       </div>
     </td>
   );
@@ -460,33 +460,38 @@ function LeaderboardRow({
   index: number;
   memberOptions: MemberOption[];
 }) {
+  const rowTone = account.isShared
+    ? "outline-amber-400/48 bg-[linear-gradient(90deg,rgba(245,184,63,0.21),rgba(245,184,63,0.09)_34%,rgba(7,19,39,0.87)_72%)] shadow-[inset_4px_0_0_rgba(245,184,63,0.95),0_0_24px_rgba(245,184,63,0.15)] hover:outline-amber-300/68 hover:bg-[linear-gradient(90deg,rgba(245,184,63,0.26),rgba(245,184,63,0.11)_34%,rgba(7,19,39,0.92)_72%)]"
+    : "outline-cyan-300/24 bg-[linear-gradient(90deg,rgba(25,216,255,0.105),rgba(7,19,39,0.82)_31%,rgba(7,19,39,0.9)_74%)] shadow-[inset_4px_0_0_rgba(25,216,255,0.52),0_0_18px_rgba(25,216,255,0.045)] hover:outline-cyan-200/42 hover:bg-[linear-gradient(90deg,rgba(25,216,255,0.14),rgba(7,19,39,0.86)_31%,rgba(7,19,39,0.93)_74%)]";
+
   return (
     <tr
       className={cn(
-        "group transition duration-150 hover:bg-cyan-300/[0.055]",
-        index === 0 && "bg-[linear-gradient(90deg,rgba(245,184,63,0.13),rgba(245,184,63,0.04)_42%,transparent)]",
-        index === 1 && "bg-[linear-gradient(90deg,rgba(148,163,184,0.13),rgba(148,163,184,0.04)_42%,transparent)]",
-        index === 2 && "bg-[linear-gradient(90deg,rgba(251,146,60,0.12),rgba(251,146,60,0.04)_42%,transparent)]",
+        "group overflow-hidden rounded-lg outline outline-1 outline-offset-[-1px] transition duration-150",
+        rowTone,
       )}
     >
-      <td className="border-b border-cyan-200/10 px-5 py-4">
-        <MemberIdentity member={account.member} rank={index + 1} />
+      <td className="rounded-l-lg px-4 py-5">
+        <RankNumber rank={index + 1} shared={account.isShared} />
       </td>
-      <td className="border-b border-cyan-200/10 px-5 py-4">
-        <LeaderboardAccountIdentity account={account} />
+      <td className="px-4 py-5">
+        <OwnerIdentity member={account.member} shared={account.isShared} />
       </td>
-      <td className="border-b border-cyan-200/10 px-5 py-4">
+      <td className="px-4 py-5">
+        <LeaderboardAccountIdentity account={account} compactCopy />
+      </td>
+      <td className="px-4 py-5">
         <RankBadge account={account} />
       </td>
-      <td className="border-b border-cyan-200/10 px-5 py-4 font-mono text-sm font-black text-white">
+      <td className="px-4 py-5 text-center font-mono text-sm font-black text-white">
         {account.lp}
       </td>
-      <td className="border-b border-cyan-200/10 px-5 py-4 text-sm font-black text-white">
+      <td className={cn("px-4 py-5 text-center text-sm font-black", winRateTone(account.winRate))}>
         {account.winRate}%
       </td>
       <CredentialCell copyLabel="Copiar User" value={account.accountUser} />
       <MaskedPswTableCell value={account.accountPsw} />
-      <td className="border-b border-cyan-200/10 px-5 py-4 text-end align-middle">
+      <td className="rounded-r-lg px-4 py-5 text-end align-middle">
         <ManageAccountDialog
           currentAccountPsw={account.accountPsw ?? ""}
           currentAccountUser={account.accountUser ?? ""}
@@ -558,6 +563,51 @@ function LeaderboardCard({
   );
 }
 
+function RankNumber({ rank, shared }: { rank: number; shared: boolean }) {
+  return (
+    <div
+      className={cn(
+        "hex-mark relative mx-auto flex size-12 items-center justify-center border text-sm font-black tabular-nums shadow-lg",
+        shared
+          ? "border-amber-200/48 bg-linear-to-br from-amber-300/18 to-black/24 text-amber-100 shadow-amber-500/22"
+          : "border-cyan-200/22 bg-linear-to-br from-cyan-400/12 to-black/26 text-slate-100 shadow-cyan-500/12",
+      )}
+    >
+      <span className="absolute inset-1 hex-mark border border-white/10 bg-black/18" />
+      <span className="relative">{rank}</span>
+    </div>
+  );
+}
+
+function OwnerIdentity({ member, shared }: { member: GroupMember | null; shared: boolean }) {
+  return (
+    <div className="flex min-w-0 items-center gap-3.5">
+      <div
+        className={cn(
+          "relative flex size-14 shrink-0 items-center justify-center rounded-xl border shadow-lg",
+          shared
+            ? "hex-mark border-amber-300/38 bg-amber-400/14 text-amber-200 shadow-amber-500/18"
+            : "border-cyan-300/26 bg-cyan-400/12 text-cyan-100 shadow-cyan-500/14",
+        )}
+      >
+        {shared ? <LinkIcon className="size-6 drop-shadow-[0_0_10px_currentColor]" /> : <UserIcon className="size-6" />}
+      </div>
+      <div className="min-w-0">
+        <div className="truncate font-black text-white">{member?.name ?? "Sin dueño"}</div>
+        <div
+          className={cn(
+            "mt-0.5 flex items-center gap-1.5 truncate text-xs font-semibold",
+            shared ? "text-amber-300" : "text-slate-400",
+          )}
+        >
+          <span>{shared ? "Cuenta compartida" : member ? formatRole(member.role) : "Sin dueño"}</span>
+          {!shared && member ? <ShieldTinyIcon className="size-3.5 text-cyan-300" /> : null}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function MemberIdentity({ member, rank }: { member: GroupMember | null; rank: number }) {
   const badgeStyle =
     rank === 1
@@ -592,7 +642,7 @@ function MemberIdentity({ member, rank }: { member: GroupMember | null; rank: nu
   );
 }
 
-function LeaderboardAccountIdentity({ account }: { account: AccountWithMember }) {
+function LeaderboardAccountIdentity({ account, compactCopy = false }: { account: AccountWithMember; compactCopy?: boolean }) {
   const riotLine = `${account.summonerName}#${account.tagLine}`;
   return (
     <div className="min-w-0">
@@ -601,23 +651,18 @@ function LeaderboardAccountIdentity({ account }: { account: AccountWithMember })
           {account.summonerName}
           <span className="text-slate-400">#{account.tagLine}</span>
         </span>
-        <CopyChip ariaLabel="Copiar nombre de cuenta" value={riotLine} />
+        <CopyChip ariaLabel="Copiar nombre de cuenta" compact={compactCopy} value={riotLine} />
       </div>
       {account.region ? (
         <div className="mt-1 text-xs font-medium text-slate-400">
           <span>{account.region}</span>
         </div>
       ) : null}
-      <div className="mt-2">
-        {account.isShared ? (
-          <Badge className="mr-1.5" tone="gold">
-            Compartida
-          </Badge>
-        ) : null}
-        <Badge tone={statusTone[account.leagueOfGraphsStatus]}>
-          {statusLabel[account.leagueOfGraphsStatus]}
-        </Badge>
-      </div>
+      {account.isShared ? (
+        <div className="mt-2">
+          <Badge tone="gold">Compartida</Badge>
+        </div>
+      ) : null}
     </div>
   );
 }
@@ -639,6 +684,61 @@ function TrophyIcon({ className }: { className?: string }) {
       <path d="M16 7h2.5v1.75c0 1.8-1.15 3.2-3 3.45" />
       <path d="M12 13.95v3.15" />
       <path d="M8.75 18.75h6.5" />
+    </svg>
+  );
+}
+
+function LinkIcon({ className }: { className?: string }) {
+  return (
+    <svg
+      aria-hidden="true"
+      className={className}
+      fill="none"
+      stroke="currentColor"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      strokeWidth="2.15"
+      viewBox="0 0 24 24"
+    >
+      <path d="M9.4 14.6 14.6 9.4" />
+      <path d="M11.2 6.4 12.6 5a4.1 4.1 0 0 1 5.8 5.8L17 12.2" />
+      <path d="m12.8 17.6-1.4 1.4a4.1 4.1 0 0 1-5.8-5.8L7 11.8" />
+    </svg>
+  );
+}
+
+function ShieldTinyIcon({ className }: { className?: string }) {
+  return (
+    <svg
+      aria-hidden="true"
+      className={className}
+      fill="none"
+      stroke="currentColor"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      strokeWidth="2"
+      viewBox="0 0 24 24"
+    >
+      <path d="M12 3.8 18 6v4.8c0 3.9-2.25 6.8-6 8.9-3.75-2.1-6-5-6-8.9V6l6-2.2Z" />
+      <path d="m9.4 12 1.75 1.75L15 9.7" />
+    </svg>
+  );
+}
+
+function UserIcon({ className }: { className?: string }) {
+  return (
+    <svg
+      aria-hidden="true"
+      className={className}
+      fill="none"
+      stroke="currentColor"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      strokeWidth="2"
+      viewBox="0 0 24 24"
+    >
+      <path d="M12 12a4 4 0 1 0 0-8 4 4 0 0 0 0 8Z" />
+      <path d="M4.5 20.2c.75-3.45 3.55-5.45 7.5-5.45s6.75 2 7.5 5.45" />
     </svg>
   );
 }
