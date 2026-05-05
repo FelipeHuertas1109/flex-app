@@ -1,6 +1,7 @@
 "use server";
 
 import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
 import { revalidatePath } from "next/cache";
 
 export async function createGroup(formData: FormData) {
@@ -84,6 +85,110 @@ export async function renameGroup(groupId: string, formData: FormData) {
   if (error) {
     console.error("renameGroup:", error);
     return { error: "No se pudo actualizar el nombre" };
+  }
+
+  revalidatePath("/");
+  return { success: true as const };
+}
+
+export async function removeGroupMember(groupId: string, memberId: string) {
+  const targetMemberId = memberId.trim();
+
+  if (!groupId || !targetMemberId) {
+    return { error: "Miembro invalido" };
+  }
+
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  if (!user) {
+    return { error: "No autorizado" };
+  }
+
+  if (user.id === targetMemberId) {
+    return { error: "No puedes eliminarte desde gestion de miembros" };
+  }
+
+  const { data: actorMembership } = await supabase
+    .from("group_members")
+    .select("role, invite_admin")
+    .eq("group_id", groupId)
+    .eq("user_id", user.id)
+    .single();
+
+  const canManageMembers = actorMembership?.role === "owner" || Boolean(actorMembership?.invite_admin);
+  if (!canManageMembers) {
+    return { error: "Solo los administradores pueden eliminar miembros" };
+  }
+
+  const { data: targetMembership } = await supabase
+    .from("group_members")
+    .select("role")
+    .eq("group_id", groupId)
+    .eq("user_id", targetMemberId)
+    .single();
+
+  if (!targetMembership) {
+    return { error: "El miembro no pertenece al grupo" };
+  }
+
+  if (targetMembership.role === "owner") {
+    return { error: "No se puede eliminar al propietario del grupo" };
+  }
+
+  let adminSupabase;
+  try {
+    adminSupabase = createAdminClient();
+  } catch {
+    return { error: "Falta SUPABASE_SERVICE_ROLE_KEY en el servidor." };
+  }
+
+  const { data: linkedAccounts, error: linkedAccountsError } = await adminSupabase
+    .from("group_accounts")
+    .select("id, riot_account_id")
+    .eq("group_id", groupId)
+    .eq("user_id", targetMemberId);
+
+  if (linkedAccountsError) {
+    console.error("removeGroupMember linked accounts:", linkedAccountsError);
+    return { error: "No se pudieron validar las cuentas del miembro" };
+  }
+
+  const riotAccountIds = [...new Set((linkedAccounts ?? []).map((account) => account.riot_account_id).filter(Boolean))];
+
+  const { error: accountsError } = await adminSupabase
+    .from("group_accounts")
+    .delete()
+    .eq("group_id", groupId)
+    .eq("user_id", targetMemberId);
+
+  if (accountsError) {
+    console.error("removeGroupMember group_accounts:", accountsError);
+    return { error: "No se pudieron eliminar las cuentas del miembro" };
+  }
+
+  const { error: memberError } = await adminSupabase
+    .from("group_members")
+    .delete()
+    .eq("group_id", groupId)
+    .eq("user_id", targetMemberId);
+
+  if (memberError) {
+    console.error("removeGroupMember group_members:", memberError);
+    return { error: "No se pudo eliminar el miembro" };
+  }
+
+  for (const riotAccountId of riotAccountIds) {
+    const { count } = await adminSupabase
+      .from("group_accounts")
+      .select("id", { count: "exact", head: true })
+      .eq("riot_account_id", riotAccountId);
+
+    if (count === 0) {
+      await adminSupabase.from("riot_accounts").delete().eq("id", riotAccountId);
+    }
   }
 
   revalidatePath("/");

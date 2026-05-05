@@ -45,6 +45,7 @@ export type GroupInvite = {
 };
 
 export type DashboardSnapshot = {
+  viewerId: string;
   group: {
     id: string;
     name: string;
@@ -56,4 +57,6 @@ export type DashboardSnapshot = {
   viewerInviteAdmin: boolean;
   /** Owner del grupo: puede renombrar el squad en el hero del dashboard. */
   viewerIsOwner: boolean;
+  /** Admin operativo del grupo: puede invitar y eliminar miembros no propietarios. */
+  viewerCanManageMembers: boolean;
 };

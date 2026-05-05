@@ -9,6 +9,7 @@ import { Panel } from "@/components/ui/panel";
 import { CopyChip } from "@/features/dashboard/components/copy-chip";
 import { MaskedPswCardBlock, MaskedPswTableCell } from "@/features/dashboard/components/masked-psw-cell";
 import { RankBadge } from "@/features/dashboard/components/rank-badge";
+import { RemoveMemberButton } from "@/features/groups/components/remove-member-button";
 import type {
   DashboardSnapshot,
   GroupMember,
@@ -194,7 +195,12 @@ export function DashboardView({ snapshot }: DashboardViewProps) {
           </dl>
         </div>
 
-        <MembersScrollPanel members={snapshot.members} />
+        <MembersScrollPanel
+          canManageMembers={snapshot.viewerCanManageMembers}
+          groupId={snapshot.group.id}
+          members={snapshot.members}
+          viewerId={snapshot.viewerId}
+        />
       </section>
 
       <section>
@@ -308,7 +314,17 @@ function StatTile({
   );
 }
 
-function MembersScrollPanel({ members }: { members: GroupMember[] }) {
+function MembersScrollPanel({
+  canManageMembers,
+  groupId,
+  members,
+  viewerId,
+}: {
+  canManageMembers: boolean;
+  groupId: string;
+  members: GroupMember[];
+  viewerId: string;
+}) {
   return (
     <Panel className="flex max-h-[min(26rem,calc(100vh-10rem))] min-h-[14rem] flex-col overflow-hidden p-0">
       <div className="border-b border-cyan-200/10 bg-[radial-gradient(circle_at_100%_0%,rgba(124,60,255,0.12),transparent_45%)] p-5">
@@ -322,30 +338,36 @@ function MembersScrollPanel({ members }: { members: GroupMember[] }) {
       </div>
       <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-5 py-4">
         <div className="divide-y divide-cyan-200/10">
-          {members.map((member) => (
-            <div
-              className="flex items-center justify-between gap-3 py-3 first:pt-0 last:pb-0"
-              key={member.id}
-            >
-              <div className="flex min-w-0 items-center gap-2.5">
-                <div
-                  className={cn(
-                    "flex size-9 shrink-0 items-center justify-center rounded-xl border text-xs font-black shadow-lg",
-                    member.role === "owner"
-                      ? "border-violet-300/28 bg-violet-500/14 text-violet-200 shadow-violet-500/10"
-                      : "border-cyan-200/12 bg-white/6 text-slate-300 shadow-black/20",
-                  )}
-                >
-                  {member.name[0]}
+          {members.map((member) => {
+            const canRemoveMember = canManageMembers && member.role !== "owner" && member.id !== viewerId;
+
+            return (
+              <div className="flex items-center justify-between gap-3 py-3 first:pt-0 last:pb-0" key={member.id}>
+                <div className="flex min-w-0 items-center gap-2.5">
+                  <div
+                    className={cn(
+                      "flex size-9 shrink-0 items-center justify-center rounded-xl border text-xs font-black shadow-lg",
+                      member.role === "owner"
+                        ? "border-violet-300/28 bg-violet-500/14 text-violet-200 shadow-violet-500/10"
+                        : "border-cyan-200/12 bg-white/6 text-slate-300 shadow-black/20",
+                    )}
+                  >
+                    {member.name[0]}
+                  </div>
+                  <div className="min-w-0">
+                    <p className="truncate text-sm font-bold text-white">{member.name}</p>
+                    <p className="truncate text-xs text-slate-500">{member.email}</p>
+                  </div>
                 </div>
-                <div className="min-w-0">
-                  <p className="truncate text-sm font-bold text-white">{member.name}</p>
-                  <p className="truncate text-xs text-slate-500">{member.email}</p>
+                <div className="flex shrink-0 items-center gap-2">
+                  <Badge tone={member.role === "owner" ? "indigo" : "neutral"}>{member.accounts.length} cuentas</Badge>
+                  {canRemoveMember ? (
+                    <RemoveMemberButton groupId={groupId} memberId={member.id} memberName={member.name} />
+                  ) : null}
                 </div>
               </div>
-              <Badge tone={member.role === "owner" ? "indigo" : "neutral"}>{member.accounts.length} cuentas</Badge>
-            </div>
-          ))}
+            );
+          })}
         </div>
       </div>
     </Panel>

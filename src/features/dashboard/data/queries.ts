@@ -171,6 +171,7 @@ export async function getDashboardSnapshot(): Promise<DashboardSnapshot | null> 
   }));
 
   return {
+    viewerId: user.id,
     group: {
       id: group.id,
       name: group.name,
@@ -180,5 +181,6 @@ export async function getDashboardSnapshot(): Promise<DashboardSnapshot | null> 
     invites,
     viewerInviteAdmin: Boolean(memberRecord.invite_admin),
     viewerIsOwner: memberRecord.role === "owner",
+    viewerCanManageMembers: memberRecord.role === "owner" || Boolean(memberRecord.invite_admin),
   };
 }
