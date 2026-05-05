@@ -157,6 +157,7 @@ export async function getDashboardSnapshot(viewerId?: string): Promise<Dashboard
       accountPsw: acc.credential_psw ?? null,
       isInGame: Boolean(riot.is_in_game),
       isMain: acc.custom_name?.toLowerCase() === "main",
+      routingPlatform: riot.routing_platform ?? null,
       flex: {
         tier: toRankTier(riot.tier || undefined),
         division: normalizeDivision(riot.rank),

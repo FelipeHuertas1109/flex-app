@@ -3,14 +3,35 @@
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { fetchRiotAccountStats } from "@/lib/riot/client";
+import { cleanRiotIdPart } from "@/lib/riot/format";
 import { revalidatePath } from "next/cache";
+
+const VALID_ROUTING_PLATFORMS = new Set([
+  "la1",
+  "la2",
+  "br1",
+  "na1",
+  "euw1",
+  "eun1",
+  "kr",
+  "jp1",
+  "oc1",
+  "tr1",
+  "ru",
+]);
+
+function normalizeRoutingPlatform(value: FormDataEntryValue | null) {
+  const platform = typeof value === "string" ? value.trim().toLowerCase() : "";
+  return VALID_ROUTING_PLATFORMS.has(platform) ? platform : null;
+}
 
 async function syncRiotAccountById(
   riotAccountId: string,
   gameName: string,
   tagLine: string,
+  routingPlatform?: string | null,
 ) {
-  const stats = await fetchRiotAccountStats(gameName, tagLine);
+  const stats = await fetchRiotAccountStats(gameName, tagLine, routingPlatform);
   if (!stats) {
     return { ok: false as const, error: "No se pudo consultar Riot API." };
   }
@@ -86,14 +107,19 @@ async function getAuthorizedGroupAccount(groupAccountId: string) {
 }
 
 export async function addAccount(groupId: string, formData: FormData) {
-  const gameName = (formData.get("gameName") as string)?.trim();
-  const tagLine = (formData.get("tagLine") as string)?.trim().toUpperCase();
+  const gameName = cleanRiotIdPart((formData.get("gameName") as string) ?? "");
+  const tagLine = cleanRiotIdPart((formData.get("tagLine") as string) ?? "").toUpperCase();
+  const routingPlatform = normalizeRoutingPlatform(formData.get("routingPlatform"));
   const isShared = formData.get("ownershipMode") === "shared";
   const accountUser = (formData.get("accountUser") as string)?.trim() ?? "";
   const accountPsw = (formData.get("accountPsw") as string)?.trim() ?? "";
 
   if (!gameName || !tagLine) {
     return { error: "Riot ID (Nombre y Tag) son obligatorios" };
+  }
+
+  if (!routingPlatform) {
+    return { error: "Selecciona una region valida" };
   }
 
   const supabase = await createClient();
@@ -113,33 +139,6 @@ export async function addAccount(groupId: string, formData: FormData) {
     return { error: "No perteneces a este grupo" };
   }
 
-  // 1. Insertar o recuperar el registro unico principal (riot_account)
-  let riotAccountId;
-  
-  const { data: existingRiotAccount } = await supabase
-    .from("riot_accounts")
-    .select("id")
-    .eq("game_name", gameName)
-    .eq("tag_line", tagLine)
-    .single();
-
-  if (existingRiotAccount) {
-    riotAccountId = existingRiotAccount.id;
-  } else {
-    const { data: newRiotAccount, error: riotError } = await supabase
-      .from("riot_accounts")
-      .insert({ game_name: gameName, tag_line: tagLine })
-      .select()
-      .single();
-
-    if (riotError || !newRiotAccount) return { error: "Error creando registro Riot" };
-    riotAccountId = newRiotAccount.id;
-  }
-
-  const syncResult = await syncRiotAccountById(riotAccountId, gameName, tagLine);
-
-  // 2. Relacionar la cuenta con el grupo (service role: mismas reglas que update/delete;
-  // el INSERT con anon a veces falla por RLS o por columnas nuevas en entornos desalineados)
   let adminSupabase;
   try {
     adminSupabase = createAdminClient();
@@ -147,6 +146,39 @@ export async function addAccount(groupId: string, formData: FormData) {
     return { error: "Falta SUPABASE_SERVICE_ROLE_KEY en el servidor." };
   }
 
+  // 1. Insertar o recuperar el registro unico principal (riot_account)
+  let riotAccountId;
+  
+  const { data: existingRiotAccount } = await supabase
+    .from("riot_accounts")
+    .select("id, routing_platform")
+    .eq("game_name", gameName)
+    .eq("tag_line", tagLine)
+    .single();
+
+  if (existingRiotAccount) {
+    riotAccountId = existingRiotAccount.id;
+    if (existingRiotAccount.routing_platform !== routingPlatform) {
+      await adminSupabase
+        .from("riot_accounts")
+        .update({ routing_platform: routingPlatform })
+        .eq("id", riotAccountId);
+    }
+  } else {
+    const { data: newRiotAccount, error: riotError } = await supabase
+      .from("riot_accounts")
+      .insert({ game_name: gameName, tag_line: tagLine, routing_platform: routingPlatform })
+      .select()
+      .single();
+
+    if (riotError || !newRiotAccount) return { error: "Error creando registro Riot" };
+    riotAccountId = newRiotAccount.id;
+  }
+
+  const syncResult = await syncRiotAccountById(riotAccountId, gameName, tagLine, routingPlatform);
+
+  // 2. Relacionar la cuenta con el grupo (service role: mismas reglas que update/delete;
+  // el INSERT con anon a veces falla por RLS o por columnas nuevas en entornos desalineados)
   const { error } = await adminSupabase.from("group_accounts").insert({
     group_id: groupId,
     user_id: user.id,
@@ -209,46 +241,69 @@ export async function syncAllAccounts(groupId: string) {
 
   const { data: accounts, error } = await supabase
     .from("group_accounts")
-    .select("riot_account_id, riot_accounts(game_name, tag_line)")
+    .select("riot_account_id, riot_accounts(game_name, tag_line, routing_platform)")
     .eq("group_id", groupId);
 
   if (error || !accounts) {
     return { error: "No se pudieron cargar las cuentas del grupo" };
   }
 
-  let synced = 0;
-  let failed = 0;
-
-  for (const account of accounts) {
+  const syncOneAccount = async (account: (typeof accounts)[number]) => {
     const riotAccount = Array.isArray(account.riot_accounts)
       ? account.riot_accounts[0]
       : account.riot_accounts;
 
     if (!riotAccount?.game_name || !riotAccount?.tag_line) {
-      failed += 1;
-      continue;
+      return false;
     }
 
     const syncResult = await syncRiotAccountById(
       account.riot_account_id,
       riotAccount.game_name,
       riotAccount.tag_line,
+      riotAccount.routing_platform,
     );
 
-    if (syncResult.ok) synced += 1;
-    else failed += 1;
-  }
+    return syncResult.ok;
+  };
+
+  const results = await runWithConcurrency(accounts, 4, syncOneAccount);
+  const synced = results.filter(Boolean).length;
+  const failed = results.length - synced;
 
   revalidatePath("/");
   return { success: true, synced, failed };
 }
 
+async function runWithConcurrency<T, R>(
+  items: T[],
+  limit: number,
+  task: (item: T) => Promise<R>,
+): Promise<R[]> {
+  const results: R[] = [];
+  let nextIndex = 0;
+
+  async function worker() {
+    while (nextIndex < items.length) {
+      const index = nextIndex;
+      nextIndex += 1;
+      results[index] = await task(items[index]);
+    }
+  }
+
+  const workerCount = Math.min(limit, items.length);
+  await Promise.all(Array.from({ length: workerCount }, () => worker()));
+  return results;
+}
+
 export async function updateAccount(groupAccountId: string, formData: FormData) {
   const ownerId = (formData.get("ownerId") as string)?.trim();
+  const routingPlatform = normalizeRoutingPlatform(formData.get("routingPlatform"));
   const isShared = ownerId === "__shared__";
   const accountUser = (formData.get("accountUser") as string)?.trim() ?? "";
   const accountPsw = (formData.get("accountPsw") as string)?.trim() ?? "";
   if (!ownerId) return { error: "Selecciona un dueno valido" };
+  if (!routingPlatform) return { error: "Selecciona una region valida" };
 
   const authCheck = await getAuthorizedGroupAccount(groupAccountId);
   if ("error" in authCheck) return { error: authCheck.error };
@@ -285,6 +340,15 @@ export async function updateAccount(groupAccountId: string, formData: FormData) 
 
   if (error) {
     return { error: "No se pudo actualizar la cuenta" };
+  }
+
+  const { error: riotAccountError } = await adminSupabase
+    .from("riot_accounts")
+    .update({ routing_platform: routingPlatform })
+    .eq("id", groupAccount.riot_account_id);
+
+  if (riotAccountError) {
+    return { error: "No se pudo actualizar la region" };
   }
 
   revalidatePath("/");

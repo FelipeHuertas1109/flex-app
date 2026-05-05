@@ -633,6 +633,7 @@ function LeaderboardRow({
             accountUser={account.accountUser}
             currentIsShared={account.isShared}
             currentOwnerId={account.member?.id ?? ""}
+            currentRoutingPlatform={account.routingPlatform}
             groupAccountId={account.id}
             members={memberOptions}
           />
@@ -689,6 +690,7 @@ function LeaderboardCard({
           accountUser={account.accountUser}
           currentIsShared={account.isShared}
           currentOwnerId={account.member?.id ?? ""}
+          currentRoutingPlatform={account.routingPlatform}
           groupAccountId={account.id}
           members={memberOptions}
         />

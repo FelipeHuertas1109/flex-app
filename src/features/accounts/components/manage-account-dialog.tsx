@@ -17,6 +17,7 @@ type ManageAccountDialogProps = {
   currentAccountUser: string;
   currentAccountPsw: string;
   members: MemberOption[];
+  currentRoutingPlatform: string | null;
 };
 
 const loadManageAccountModal = () => import("@/features/accounts/components/manage-account-modal");
@@ -30,6 +31,7 @@ export function ManageAccountDialog({
   currentIsShared,
   currentAccountUser,
   currentAccountPsw,
+  currentRoutingPlatform,
   members,
 }: ManageAccountDialogProps) {
   const [isOpen, setIsOpen] = useState(false);
@@ -60,6 +62,7 @@ export function ManageAccountDialog({
           currentAccountUser={currentAccountUser}
           currentIsShared={currentIsShared}
           currentOwnerId={currentOwnerId}
+          currentRoutingPlatform={currentRoutingPlatform}
           groupAccountId={groupAccountId}
           members={members}
           onClose={close}

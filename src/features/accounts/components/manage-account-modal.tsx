@@ -18,10 +18,25 @@ type ManageAccountModalProps = {
   currentIsShared: boolean;
   currentAccountUser: string;
   currentAccountPsw: string;
+  currentRoutingPlatform: string | null;
   members: MemberOption[];
   onClose: () => void;
   open: boolean;
 };
+
+const REGION_OPTIONS = [
+  { label: "LAN", value: "la1" },
+  { label: "LAS", value: "la2" },
+  { label: "BR", value: "br1" },
+  { label: "NA", value: "na1" },
+  { label: "EUW", value: "euw1" },
+  { label: "EUNE", value: "eun1" },
+  { label: "KR", value: "kr" },
+  { label: "JP", value: "jp1" },
+  { label: "OCE", value: "oc1" },
+  { label: "TR", value: "tr1" },
+  { label: "RU", value: "ru" },
+];
 
 export function ManageAccountModal({
   groupAccountId,
@@ -29,6 +44,7 @@ export function ManageAccountModal({
   currentIsShared,
   currentAccountUser,
   currentAccountPsw,
+  currentRoutingPlatform,
   members,
   onClose,
   open,
@@ -106,6 +122,23 @@ export function ManageAccountModal({
                   {members.map((member) => (
                     <option key={member.id} value={member.id}>
                       {member.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label className="block text-sm font-semibold text-slate-300" htmlFor={`edit-region-${groupAccountId}`}>
+                  Región
+                </label>
+                <select
+                  className={`${inputBase} cursor-pointer`}
+                  defaultValue={currentRoutingPlatform ?? "la1"}
+                  id={`edit-region-${groupAccountId}`}
+                  name="routingPlatform"
+                >
+                  {REGION_OPTIONS.map((region) => (
+                    <option key={region.value} value={region.value}>
+                      {region.label}
                     </option>
                   ))}
                 </select>

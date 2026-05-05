@@ -1,3 +1,5 @@
+import { cleanRiotIdPart } from "@/lib/riot/format";
+
 export interface AccountStats {
   gameName: string;
   tagLine: string;
@@ -17,7 +19,6 @@ export interface QueueStats {
 }
 
 const REGION_ROUTING = "americas"; // Para Account-V1
-const DEFAULT_PLATFORM = "la2"; // LAS
 
 const TAG_TO_PLATFORM: Record<string, string> = {
   LAS: "la2",
@@ -107,7 +108,7 @@ async function fetchIsInGame(
 export async function fetchRiotAccountStats(
   gameName: string,
   tagLine: string,
-  platform: string = DEFAULT_PLATFORM
+  platform?: string | null
 ): Promise<AccountStats | null> {
   const apiKey = process.env.RIOT_API_KEY;
   if (!apiKey) {
@@ -117,17 +118,20 @@ export async function fetchRiotAccountStats(
 
   try {
     const headers = { "X-Riot-Token": apiKey };
+    const cleanGameName = cleanRiotIdPart(gameName);
+    const cleanTagLine = cleanRiotIdPart(tagLine);
 
-    const accountUrl = `https://${REGION_ROUTING}.api.riotgames.com/riot/account/v1/accounts/by-riot-id/${encodeURIComponent(gameName)}/${encodeURIComponent(tagLine)}`;
+    const accountUrl = `https://${REGION_ROUTING}.api.riotgames.com/riot/account/v1/accounts/by-riot-id/${encodeURIComponent(cleanGameName)}/${encodeURIComponent(cleanTagLine)}`;
     const accountRes = await fetch(accountUrl, { headers });
     if (!accountRes.ok) throw new Error(`Account API error: ${accountRes.status} ${accountRes.statusText}`);
     const accountData = await accountRes.json();
     const puuid = accountData.puuid;
 
-    const platformCandidates = [
-      platform,
-      ...getPlatformCandidates(tagLine).filter((candidate) => candidate !== platform),
-    ];
+    const normalizedPlatform = platform?.trim().toLowerCase();
+    const inferredCandidates = getPlatformCandidates(tagLine);
+    const platformCandidates = normalizedPlatform
+      ? [normalizedPlatform, ...inferredCandidates.filter((candidate) => candidate !== normalizedPlatform)]
+      : inferredCandidates;
 
     let bestNonEmpty: { entries: LeagueEntry[]; platform: string } | null = null;
     let firstReachablePlatform: string | null = null;
@@ -145,7 +149,10 @@ export async function fetchRiotAccountStats(
 
       const entries: LeagueEntry[] = await leagueRes.json();
       firstReachablePlatform ??= candidate;
-      const isInGame = await fetchIsInGame(puuid, candidate, headers);
+      const isInGame = await fetchIsInGame(puuid, candidate, headers).catch((error) => {
+        console.warn(`No se pudo consultar partida en vivo para ${gameName}#${tagLine} en ${candidate}:`, error);
+        return false;
+      });
       const flexStats = entries.find((q) => q.queueType === "RANKED_FLEX_SR");
       const soloDuoStats = entries.find((q) => q.queueType === "RANKED_SOLO_5x5");
       if (flexStats || soloDuoStats || isInGame) {
@@ -185,7 +192,7 @@ export async function fetchRiotAccountStats(
     };
 
   } catch (error) {
-    console.error(`Error fetching data for ${gameName}#${tagLine}:`, error);
+    console.error(`Error fetching data for ${cleanRiotIdPart(gameName)}#${cleanRiotIdPart(tagLine)}:`, error);
     return null;
   }
 }

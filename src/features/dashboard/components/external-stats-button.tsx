@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
+import { cleanRiotIdPart, riotAccountPath } from "@/lib/riot/format";
 
 type ExternalStatsButtonProps = {
   gameName: string;
@@ -19,14 +20,10 @@ const POPOVER_WIDTH = 360;
 const POPOVER_HEIGHT = 174;
 const POPOVER_GAP = 8;
 
-function accountPath(gameName: string, tagLine: string) {
-  return encodeURIComponent(`${gameName.trim()}-${tagLine.trim()}`);
-}
-
 function regionSlug(region: string, tagLine: string) {
-  const normalizedRegion = region.trim().toLowerCase();
+  const normalizedRegion = cleanRiotIdPart(region).toLowerCase();
   if (normalizedRegion) return normalizedRegion;
-  return tagLine.trim().toLowerCase() || "lan";
+  return cleanRiotIdPart(tagLine).toLowerCase() || "lan";
 }
 
 export function ExternalStatsButton({ gameName, region, tagLine }: ExternalStatsButtonProps) {
@@ -34,7 +31,7 @@ export function ExternalStatsButton({ gameName, region, tagLine }: ExternalStats
   const [position, setPosition] = useState<PopoverPosition | null>(null);
   const buttonRef = useRef<HTMLButtonElement>(null);
   const popoverRef = useRef<HTMLDivElement>(null);
-  const account = accountPath(gameName, tagLine);
+  const account = riotAccountPath(gameName, tagLine);
   const slug = regionSlug(region, tagLine);
   const leagueOfGraphsUrl = `https://www.leagueofgraphs.com/summoner/${slug}/${account}`;
   const opggUrl = `https://op.gg/lol/summoners/${slug}/${account}`;

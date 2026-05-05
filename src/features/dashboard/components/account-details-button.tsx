@@ -16,6 +16,7 @@ type AccountDetailsButtonProps = {
   accountUser: string | null;
   currentIsShared: boolean;
   currentOwnerId: string;
+  currentRoutingPlatform: string | null;
   groupAccountId: string;
   members: MemberOption[];
 };
@@ -36,6 +37,7 @@ export function AccountDetailsButton({
   accountUser,
   currentIsShared,
   currentOwnerId,
+  currentRoutingPlatform,
   groupAccountId,
   members,
 }: AccountDetailsButtonProps) {
@@ -170,6 +172,7 @@ export function AccountDetailsButton({
               currentAccountUser={accountUser ?? ""}
               currentIsShared={currentIsShared}
               currentOwnerId={currentOwnerId}
+              currentRoutingPlatform={currentRoutingPlatform}
               groupAccountId={groupAccountId}
               members={members}
             />

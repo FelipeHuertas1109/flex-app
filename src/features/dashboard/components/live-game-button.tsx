@@ -1,3 +1,5 @@
+import { cleanRiotIdPart, riotAccountPath } from "@/lib/riot/format";
+
 type LiveGameButtonProps = {
   gameName: string;
   inGame: boolean;
@@ -5,18 +7,14 @@ type LiveGameButtonProps = {
   tagLine: string;
 };
 
-function accountPath(gameName: string, tagLine: string) {
-  return encodeURIComponent(`${gameName.trim()}-${tagLine.trim()}`);
-}
-
 function regionSlug(region: string, tagLine: string) {
-  const normalizedRegion = region.trim().toLowerCase();
+  const normalizedRegion = cleanRiotIdPart(region).toLowerCase();
   if (normalizedRegion) return normalizedRegion;
-  return tagLine.trim().toLowerCase() || "lan";
+  return cleanRiotIdPart(tagLine).toLowerCase() || "lan";
 }
 
 export function LiveGameButton({ gameName, inGame, region, tagLine }: LiveGameButtonProps) {
-  const account = accountPath(gameName, tagLine);
+  const account = riotAccountPath(gameName, tagLine);
   const slug = regionSlug(region, tagLine);
   const porofessorUrl = `https://porofessor.gg/live/${slug}/${account}`;
 

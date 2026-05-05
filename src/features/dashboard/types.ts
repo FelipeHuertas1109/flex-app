@@ -24,6 +24,7 @@ export type LeagueAccount = {
   accountPsw: string | null;
   isInGame: boolean;
   isMain: boolean;
+  routingPlatform: string | null;
   flex: {
     tier: RankTier;
     division: "I" | "II" | "III" | "IV" | null;

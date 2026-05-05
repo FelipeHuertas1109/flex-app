@@ -13,6 +13,20 @@ type AddAccountModalProps = {
   open: boolean;
 };
 
+const REGION_OPTIONS = [
+  { label: "LAN", value: "la1" },
+  { label: "LAS", value: "la2" },
+  { label: "BR", value: "br1" },
+  { label: "NA", value: "na1" },
+  { label: "EUW", value: "euw1" },
+  { label: "EUNE", value: "eun1" },
+  { label: "KR", value: "kr" },
+  { label: "JP", value: "jp1" },
+  { label: "OCE", value: "oc1" },
+  { label: "TR", value: "tr1" },
+  { label: "RU", value: "ru" },
+];
+
 export function AddAccountModal({ groupId, onClose, open }: AddAccountModalProps) {
   const [isPending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
@@ -91,6 +105,18 @@ export function AddAccountModal({ groupId, onClose, open }: AddAccountModalProps
                     Tag Line
                   </label>
                   <input autoComplete="off" className={inputBase} id="add-tag" name="tagLine" placeholder="ej: LAN" required />
+                </div>
+                <div>
+                  <label className="block text-sm font-semibold text-slate-300" htmlFor="add-region">
+                    Región
+                  </label>
+                  <select className={`${inputBase} cursor-pointer`} defaultValue="la1" id="add-region" name="routingPlatform" required>
+                    {REGION_OPTIONS.map((region) => (
+                      <option key={region.value} value={region.value}>
+                        {region.label}
+                      </option>
+                    ))}
+                  </select>
                 </div>
               </fieldset>
 
