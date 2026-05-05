@@ -8,6 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Panel } from "@/components/ui/panel";
 import { CopyChip } from "@/features/dashboard/components/copy-chip";
+import { ExternalStatsButton } from "@/features/dashboard/components/external-stats-button";
 import { MaskedPswCardBlock, MaskedPswTableCell } from "@/features/dashboard/components/masked-psw-cell";
 import { RankBadge } from "@/features/dashboard/components/rank-badge";
 import { RemoveMemberButton } from "@/features/groups/components/remove-member-button";
@@ -643,15 +644,18 @@ function LeaderboardRow({
       </td>
       <CredentialCell copyLabel="Copiar User" value={account.accountUser} />
       <MaskedPswTableCell value={account.accountPsw} />
-      <td className="rounded-r-lg px-4 py-5 text-end align-middle">
-        <ManageAccountDialog
-          currentAccountPsw={account.accountPsw ?? ""}
-          currentAccountUser={account.accountUser ?? ""}
-          currentIsShared={account.isShared}
-          currentOwnerId={account.member?.id ?? ""}
-          groupAccountId={account.id}
-          members={memberOptions}
-        />
+      <td className="rounded-r-lg px-4 py-5 align-middle">
+        <div className="flex justify-end gap-2">
+          <ExternalStatsButton gameName={account.summonerName} region={account.region} tagLine={account.tagLine} />
+          <ManageAccountDialog
+            currentAccountPsw={account.accountPsw ?? ""}
+            currentAccountUser={account.accountUser ?? ""}
+            currentIsShared={account.isShared}
+            currentOwnerId={account.member?.id ?? ""}
+            groupAccountId={account.id}
+            members={memberOptions}
+          />
+        </div>
       </td>
     </tr>
   );
@@ -705,7 +709,8 @@ function LeaderboardCard({
         <p className="truncate font-mono text-xs font-semibold text-white">{account.accountUser?.trim() || "—"}</p>
         <MaskedPswCardBlock value={account.accountPsw} />
       </div>
-      <div className="mt-4 flex justify-end border-t border-cyan-200/12 pt-3">
+      <div className="mt-4 flex justify-end gap-2 border-t border-cyan-200/12 pt-3">
+        <ExternalStatsButton gameName={account.summonerName} region={account.region} tagLine={account.tagLine} />
         <ManageAccountDialog
           currentAccountPsw={account.accountPsw ?? ""}
           currentAccountUser={account.accountUser ?? ""}
