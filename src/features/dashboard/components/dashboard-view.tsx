@@ -121,7 +121,17 @@ export function DashboardView({ snapshot, queue }: DashboardViewProps) {
   }));
   const accounts = [...memberAccounts, ...sharedAccounts];
   const sortedAccounts = [...accounts].sort((left, right) => leaderboardSortScore(right, queue) - leaderboardSortScore(left, queue));
-  const leaderLp = sortedAccounts[0] ? (queue === "solo-duo" ? sortedAccounts[0].soloDuo.lp : sortedAccounts[0].flex.lp) : 0;
+  const worstWinRateAccount = sortedAccounts
+    .filter((account) => {
+      const queueStats = queue === "solo-duo" ? account.soloDuo : account.flex;
+      return queueStats.totalGames > 0;
+    })
+    .sort((left, right) => {
+      const leftStats = queue === "solo-duo" ? left.soloDuo : left.flex;
+      const rightStats = queue === "solo-duo" ? right.soloDuo : right.flex;
+      return leftStats.winRate - rightStats.winRate || rightStats.totalGames - leftStats.totalGames;
+    })[0];
+  const worstWinRateStats = worstWinRateAccount ? (queue === "solo-duo" ? worstWinRateAccount.soloDuo : worstWinRateAccount.flex) : null;
   const memberOptions = snapshot.members.map((member) => ({
     id: member.id,
     name: member.name,
@@ -182,11 +192,16 @@ export function DashboardView({ snapshot, queue }: DashboardViewProps) {
               value={accounts.length.toString()}
             />
             <StatTile
-              accent="gold"
-              detail="Primero del ranking ordenado"
+              accent="danger"
+              detail={
+                worstWinRateAccount && worstWinRateStats
+                  ? `${worstWinRateStats.winRate}% WR en ${worstWinRateStats.totalGames} partidas`
+                  : "Sin partidas en la cola seleccionada"
+              }
               icon="crown"
-              label="Mayor LP"
-              value={String(leaderLp)}
+              label="Bollo de mrd"
+              value={worstWinRateAccount?.summonerName ?? "Sin datos"}
+              valueClassName="text-2xl sm:text-3xl"
             />
           </dl>
         </div>
@@ -289,12 +304,14 @@ function StatTile({
   icon,
   label,
   value,
+  valueClassName,
 }: {
   accent: Accent;
   detail: string;
   icon: StatIconName;
   label: string;
   value: string;
+  valueClassName?: string;
 }) {
   const styles = accentStyles[accent];
 
@@ -314,7 +331,9 @@ function StatTile({
           <StatIcon className="relative size-6 drop-shadow-[0_0_10px_currentColor]" name={icon} />
         </span>
       </div>
-      <dd className="mt-3 text-4xl font-black tabular-nums text-white">{value}</dd>
+      <dd className={cn("mt-3 truncate text-4xl font-black tabular-nums text-white", valueClassName)} title={value}>
+        {value}
+      </dd>
       <p className="mt-1 text-sm font-medium text-slate-400">{detail}</p>
     </div>
   );
