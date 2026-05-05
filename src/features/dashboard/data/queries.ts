@@ -65,7 +65,7 @@ function toRankTier(value: string | null | undefined): RankTier {
   return RANK_TIERS.has(t) ? (t as RankTier) : "UNRANKED";
 }
 
-function normalizeDivision(rank: string | null | undefined): LeagueAccount["division"] {
+function normalizeDivision(rank: string | null | undefined): LeagueAccount["flex"]["division"] {
   const r = rank?.trim().toUpperCase();
   if (r === "I" || r === "II" || r === "III" || r === "IV") return r;
   return null;
