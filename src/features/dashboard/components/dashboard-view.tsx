@@ -9,6 +9,7 @@ import { Panel } from "@/components/ui/panel";
 import { AccountDetailsButton } from "@/features/dashboard/components/account-details-button";
 import { CopyChip } from "@/features/dashboard/components/copy-chip";
 import { ExternalStatsButton } from "@/features/dashboard/components/external-stats-button";
+import { LiveGameButton } from "@/features/dashboard/components/live-game-button";
 import { RankBadge } from "@/features/dashboard/components/rank-badge";
 import { RemoveMemberButton } from "@/features/groups/components/remove-member-button";
 import type {
@@ -307,7 +308,7 @@ export function DashboardView({ snapshot, queue, sort, sortDirection }: Dashboar
           {sortedAccounts.length > 0 ? (
             <>
               <div className="hidden overflow-x-auto p-4 md:block">
-                <table className="w-full min-w-[1040px] border-separate border-spacing-y-1 text-left">
+                <table className="w-full min-w-[980px] border-separate border-spacing-y-1 text-left">
                   <thead className="text-[11px] uppercase tracking-[0.08em] text-slate-300/85">
                     <tr>
                       <th className="w-[4.75rem] px-4 py-3 text-center font-black">#</th>
@@ -316,7 +317,6 @@ export function DashboardView({ snapshot, queue, sort, sortDirection }: Dashboar
                       <SortableHeader activeSort={sort} className="px-4 py-3" queue={queue} sort="rank" sortDirection={sortDirection}>
                         Rango
                       </SortableHeader>
-                      <th className="px-4 py-3 text-center font-black">LP</th>
                       <SortableHeader activeSort={sort} className="px-4 py-3 text-center" queue={queue} sort="games" sortDirection={sortDirection}>
                         Partidas
                       </SortableHeader>
@@ -616,10 +616,7 @@ function LeaderboardRow({
         <LeaderboardAccountIdentity account={account} compactCopy />
       </td>
       <td className="px-4 py-5">
-        <RankBadge division={queueStats.division} tier={queueStats.tier} />
-      </td>
-      <td className="px-4 py-5 text-center font-mono text-sm font-black text-white">
-        {queueStats.lp}
+        <RankBadge division={queueStats.division} lp={queueStats.lp} tier={queueStats.tier} />
       </td>
       <td className="px-4 py-5 text-center font-mono text-sm font-black text-slate-100">
         {queueStats.totalGames}
@@ -629,6 +626,7 @@ function LeaderboardRow({
       </td>
       <td className="rounded-r-lg px-4 py-5 align-middle">
         <div className="flex justify-end gap-2">
+          <LiveGameButton gameName={account.summonerName} inGame={account.isInGame} region={account.region} tagLine={account.tagLine} />
           <ExternalStatsButton gameName={account.summonerName} region={account.region} tagLine={account.tagLine} />
           <AccountDetailsButton
             accountPsw={account.accountPsw}
@@ -674,17 +672,17 @@ function LeaderboardCard({
     >
       <div className="flex min-w-0 flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
         <MemberIdentity member={account.member} rank={index + 1} />
-        <RankBadge className="w-fit max-w-full sm:shrink-0" division={queueStats.division} tier={queueStats.tier} />
+        <RankBadge className="w-fit max-w-full sm:shrink-0" division={queueStats.division} lp={queueStats.lp} tier={queueStats.tier} />
       </div>
       <div className="mt-4 min-w-0">
         <LeaderboardAccountIdentity account={account} />
       </div>
       <div className="mt-4 grid min-w-0 grid-cols-2 gap-2 sm:gap-3">
-        <MetricPill label="LP" value={queueStats.lp.toString()} />
         <MetricPill label="Partidas" value={queueStats.totalGames.toString()} />
         <MetricPill label="Win rate" value={`${queueStats.winRate}%`} />
       </div>
       <div className="mt-4 flex justify-end gap-2 border-t border-cyan-200/12 pt-3">
+        <LiveGameButton gameName={account.summonerName} inGame={account.isInGame} region={account.region} tagLine={account.tagLine} />
         <ExternalStatsButton gameName={account.summonerName} region={account.region} tagLine={account.tagLine} />
         <AccountDetailsButton
           accountPsw={account.accountPsw}

@@ -2,6 +2,7 @@ export interface AccountStats {
   gameName: string;
   tagLine: string;
   flex: QueueStats;
+  isInGame: boolean;
   soloDuo: QueueStats;
   /** Shard LoL donde se resolvieron ligas (ej la1 la2). */
   routingPlatform?: string | null;
@@ -89,6 +90,20 @@ function getPlatformCandidates(tagLine: string) {
   return [inferred, ...PLATFORM_FALLBACK_ORDER.filter((platform) => platform !== inferred)];
 }
 
+async function fetchIsInGame(
+  puuid: string,
+  platform: string,
+  headers: { "X-Riot-Token": string },
+): Promise<boolean> {
+  const spectatorUrl = `https://${platform}.api.riotgames.com/lol/spectator/v5/active-games/by-summoner/${puuid}`;
+  const spectatorRes = await fetch(spectatorUrl, { headers });
+
+  if (spectatorRes.ok) return true;
+  if (spectatorRes.status === 404) return false;
+
+  throw new Error(`Spectator API error: ${spectatorRes.status}`);
+}
+
 export async function fetchRiotAccountStats(
   gameName: string,
   tagLine: string,
@@ -115,6 +130,7 @@ export async function fetchRiotAccountStats(
     ];
 
     let bestNonEmpty: { entries: LeagueEntry[]; platform: string } | null = null;
+    let firstReachablePlatform: string | null = null;
 
     for (const candidate of platformCandidates) {
       const leagueUrl = `https://${candidate}.api.riotgames.com/lol/league/v4/entries/by-puuid/${puuid}`;
@@ -128,13 +144,16 @@ export async function fetchRiotAccountStats(
       }
 
       const entries: LeagueEntry[] = await leagueRes.json();
+      firstReachablePlatform ??= candidate;
+      const isInGame = await fetchIsInGame(puuid, candidate, headers);
       const flexStats = entries.find((q) => q.queueType === "RANKED_FLEX_SR");
       const soloDuoStats = entries.find((q) => q.queueType === "RANKED_SOLO_5x5");
-      if (flexStats || soloDuoStats) {
+      if (flexStats || soloDuoStats || isInGame) {
         return {
           gameName: accountData.gameName,
           tagLine: accountData.tagLine,
           flex: toQueueStats(flexStats),
+          isInGame,
           soloDuo: toQueueStats(soloDuoStats),
           routingPlatform: candidate,
         };
@@ -150,6 +169,7 @@ export async function fetchRiotAccountStats(
         gameName: accountData.gameName,
         tagLine: accountData.tagLine,
         flex: EMPTY_QUEUE_STATS,
+        isInGame: false,
         soloDuo: EMPTY_QUEUE_STATS,
         routingPlatform: bestNonEmpty.platform,
       };
@@ -159,8 +179,9 @@ export async function fetchRiotAccountStats(
       gameName: accountData.gameName,
       tagLine: accountData.tagLine,
       flex: EMPTY_QUEUE_STATS,
+      isInGame: false,
       soloDuo: EMPTY_QUEUE_STATS,
-      routingPlatform: null,
+      routingPlatform: firstReachablePlatform,
     };
 
   } catch (error) {

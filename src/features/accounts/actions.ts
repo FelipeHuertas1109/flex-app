@@ -36,6 +36,8 @@ async function syncRiotAccountById(
       solo_lp: stats.soloDuo.lp,
       solo_win_rate: stats.soloDuo.winRate,
       solo_total_games: stats.soloDuo.totalGames,
+      is_in_game: stats.isInGame,
+      live_game_checked_at: new Date().toISOString(),
       routing_platform: stats.routingPlatform ?? null,
       last_synced_at: new Date().toISOString(),
     })

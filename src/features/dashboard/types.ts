@@ -22,6 +22,7 @@ export type LeagueAccount = {
   accountUser: string | null;
   /** Texto guardado (modal: etiqueta Psw). */
   accountPsw: string | null;
+  isInGame: boolean;
   isMain: boolean;
   flex: {
     tier: RankTier;

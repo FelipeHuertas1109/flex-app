@@ -5,6 +5,7 @@ import { cn } from "@/lib/utils";
 type RankBadgeProps = {
   tier: LeagueAccount["flex"]["tier"];
   division: LeagueAccount["flex"]["division"];
+  lp?: number;
   className?: string;
 };
 
@@ -60,10 +61,11 @@ const tierEmblems: Partial<Record<LeagueAccount["flex"]["tier"], string>> = {
   CHALLENGER: "/emblem-small/emblem-challenger.webp",
 };
 
-export function RankBadge({ tier, division, className }: RankBadgeProps) {
+export function RankBadge({ tier, division, lp, className }: RankBadgeProps) {
   const tierStyle = tierStyles[tier] ?? tierStyles.UNRANKED;
   const tierLabel = tierLabels[tier] ?? tierLabels.UNRANKED;
-  const label = (division ? `${tierLabel} ${division}` : tierLabel).toUpperCase();
+  const rankLabel = division ? `${tierLabel} ${division}` : tierLabel;
+  const label = (typeof lp === "number" ? `${rankLabel} - ${lp} PL` : rankLabel).toUpperCase();
   const emblemSrc = tierEmblems[tier];
 
   return (
