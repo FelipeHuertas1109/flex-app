@@ -30,6 +30,14 @@ type RiotAccountRow = {
   average_position: string | number | null;
   last_synced_at: string | null;
   routing_platform?: string | null;
+  solo_tier?: string | null;
+  solo_rank?: string | null;
+  solo_lp?: number | null;
+  solo_win_rate?: string | number | null;
+  flex_tier?: string | null;
+  flex_rank?: string | null;
+  flex_lp?: number | null;
+  flex_win_rate?: string | number | null;
 };
 
 type GroupAccountQueryRow = {
@@ -109,7 +117,7 @@ export async function getDashboardSnapshot(viewerId?: string): Promise<Dashboard
     supabase
       .from("group_accounts")
       .select(
-        "id, user_id, is_shared, custom_name, credential_user, credential_psw, riot_accounts(game_name, tag_line, tier, rank, lp, win_rate, average_position, last_synced_at, routing_platform)",
+        "id, user_id, is_shared, custom_name, credential_user, credential_psw, riot_accounts(game_name, tag_line, tier, rank, lp, win_rate, average_position, last_synced_at, routing_platform, solo_tier, solo_rank, solo_lp, solo_win_rate, flex_tier, flex_rank, flex_lp, flex_win_rate)",
       )
       .eq("group_id", groupId),
     supabase
@@ -153,6 +161,14 @@ export async function getDashboardSnapshot(viewerId?: string): Promise<Dashboard
       division: normalizeDivision(riot.rank),
       lp: riot.lp ?? 0,
       winRate: numericOrZero(riot.win_rate),
+      soloTier: toRankTier(riot.solo_tier || undefined),
+      soloDivision: normalizeDivision(riot.solo_rank),
+      soloLp: numericOrZero(riot.solo_lp),
+      soloWinRate: numericOrZero(riot.solo_win_rate),
+      flexTier: toRankTier(riot.flex_tier || riot.tier || undefined),
+      flexDivision: normalizeDivision(riot.flex_rank || riot.rank),
+      flexLp: numericOrZero(riot.flex_lp ?? riot.lp),
+      flexWinRate: numericOrZero(riot.flex_win_rate ?? riot.win_rate),
       leagueOfGraphsStatus: riot.last_synced_at ? "synced" : "pending",
     };
   };
