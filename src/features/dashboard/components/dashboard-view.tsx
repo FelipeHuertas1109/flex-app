@@ -744,13 +744,21 @@ function MembersScrollPanel({
                 <div className="flex min-w-0 items-center gap-2.5">
                   <div
                     className={cn(
-                      "flex size-9 shrink-0 items-center justify-center rounded-xl border text-xs font-black shadow-lg",
+                      "relative flex size-9 shrink-0 items-center justify-center overflow-hidden rounded-xl border text-xs font-black shadow-lg",
                       member.role === "owner"
                         ? "border-violet-300/28 bg-violet-500/14 text-violet-200 shadow-violet-500/10"
                         : "border-cyan-200/12 bg-white/6 text-slate-300 shadow-black/20",
                     )}
+                    title={member.name}
                   >
-                    {member.name[0]}
+                    {member.avatarUrl ? (
+                      <>
+                        <Image alt={member.name} className="object-cover" fill sizes="36px" src={member.avatarUrl} />
+                        <span className="absolute inset-0 bg-linear-to-br from-white/18 via-transparent to-black/22" />
+                      </>
+                    ) : (
+                      member.name[0]
+                    )}
                   </div>
                   <div className="min-w-0">
                     <p className="truncate text-sm font-bold text-white">{member.name}</p>
