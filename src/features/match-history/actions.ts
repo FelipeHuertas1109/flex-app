@@ -5,6 +5,7 @@ import { createClient } from "@/lib/supabase/server";
 import { getChampionsByKeyMap, getItemsMap, getSummonerSpellsMap } from "@/lib/lol/ddragon";
 import { getStoredRiotApiKeyRecord } from "@/lib/riot/api-key";
 import {
+  fetchLeagueStatsByPuuid,
   fetchMatchById,
   fetchMatchIdsByPuuid,
   fetchRiotAccountByRiotId,
@@ -279,6 +280,7 @@ function toHistoryItem(
             : null,
       opScore: scores.get(item.participantId) ?? 0,
       participantId: item.participantId,
+      puuid: item.puuid,
       riotId: riotId(item),
       selected: item.puuid === participant.puuid,
       summonerSpells: participantSpells(item, summonerSpellsMap),
@@ -305,6 +307,7 @@ function toHistoryItem(
     deaths,
     assists: participant.assists || 0,
     lane: participant.teamPosition || participant.individualPosition || participant.lane || "Sin rol",
+    lpChange: typeof participant.challenges?.lpChange === "number" ? participant.challenges.lpChange : null,
     largestMultiKill: largestMultiKill(participant),
     matchId: match.metadata.matchId,
     queue: QUEUE_LABELS[match.info.queueId] ?? `Queue ${match.info.queueId}`,
@@ -327,7 +330,10 @@ function toHistoryItem(
   };
 }
 
-export async function getMatchHistory(groupAccountId: string): Promise<MatchHistoryResult> {
+export type QueueFilter = "soloq" | "flex";
+const QUEUE_IDS: Record<QueueFilter, number> = { soloq: 420, flex: 440 };
+
+export async function getMatchHistory(groupAccountId: string, queue: QueueFilter = "soloq"): Promise<MatchHistoryResult> {
   const supabase = await createClient();
   const {
     data: { user },
@@ -399,7 +405,7 @@ export async function getMatchHistory(groupAccountId: string): Promise<MatchHist
       getChampionsByKeyMap(),
       getItemsMap(),
       getSummonerSpellsMap(),
-      fetchMatchIdsByPuuid(puuid, platform, riotApiKey.apiKey, 20),
+      fetchMatchIdsByPuuid(puuid, platform, riotApiKey.apiKey, 20, QUEUE_IDS[queue]),
     ]);
 
     const matches = await runWithConcurrency(matchIds, 3, async (matchId) => fetchMatchById(matchId, platform, riotApiKey.apiKey!));
@@ -430,4 +436,31 @@ export async function getMatchHistory(groupAccountId: string): Promise<MatchHist
           : "No se pudo consultar el historial de partidas.",
     };
   }
+}
+
+export type ParticipantRankInfo = { tier: string; division: string | null };
+
+export async function getMatchParticipantTiers(
+  puuids: string[],
+  platform: string,
+): Promise<Record<string, ParticipantRankInfo>> {
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return {};
+
+  const riotApiKey = await getStoredRiotApiKeyRecord();
+  if (riotApiKey.error || !riotApiKey.apiKey) return {};
+
+  const results = await runWithConcurrency(puuids, 3, async (puuid) => {
+    try {
+      const stats = await fetchLeagueStatsByPuuid(puuid, platform, riotApiKey.apiKey!);
+      const useSoloDuo = stats.soloDuo.tier !== "UNRANKED";
+      const chosen = useSoloDuo ? stats.soloDuo : stats.flex;
+      return { puuid, tier: chosen.tier ?? "UNRANKED", division: chosen.rank };
+    } catch {
+      return { puuid, tier: "UNRANKED", division: null };
+    }
+  });
+
+  return Object.fromEntries(results.map((r) => [r.puuid, { tier: r.tier, division: r.division }]));
 }

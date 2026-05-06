@@ -29,6 +29,7 @@ export type MatchHistoryItem = {
   deaths: number;
   assists: number;
   lane: string;
+  lpChange: number | null;
   largestMultiKill: string | null;
   matchId: string;
   queue: string;
@@ -63,6 +64,7 @@ export type MatchHistoryParticipant = {
   opLabel: "ACE" | "MVP" | null;
   opScore: number;
   participantId: number;
+  puuid: string;
   riotId: string;
   selected: boolean;
   summonerSpells: {

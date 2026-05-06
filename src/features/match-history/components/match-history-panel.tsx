@@ -5,7 +5,7 @@ import Image from "next/image";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Panel } from "@/components/ui/panel";
-import { getMatchHistory } from "@/features/match-history/actions";
+import { getMatchHistory, getMatchParticipantTiers, type ParticipantRankInfo, type QueueFilter } from "@/features/match-history/actions";
 import type { DashboardSnapshot, GroupMember, LeagueAccount } from "@/features/dashboard/types";
 import type { MatchHistoryItem, MatchHistoryResult } from "@/features/match-history/types";
 import { cn } from "@/lib/utils";
@@ -39,26 +39,31 @@ function updatedAtLabel(value: string) {
 export function MatchHistoryPanel({ snapshot }: { snapshot: DashboardSnapshot }) {
   const accounts = useMemo(() => allAccounts(snapshot), [snapshot]);
   const [selectedAccountId, setSelectedAccountId] = useState(accounts[0]?.id ?? "");
-  const [historyState, setHistoryState] = useState<{ accountId: string; result: MatchHistoryResult } | null>(null);
+  const [queue, setQueue] = useState<QueueFilter>("soloq");
+  const [historyState, setHistoryState] = useState<{ accountId: string; queue: QueueFilter; result: MatchHistoryResult } | null>(null);
   const [isPending, startTransition] = useTransition();
 
   const selectedAccount = accounts.find((account) => account.id === selectedAccountId) ?? accounts[0] ?? null;
-  const selectedHistory = historyState?.accountId === selectedAccount?.id ? historyState.result : null;
+  const selectedHistory = historyState?.accountId === selectedAccount?.id && historyState.queue === queue ? historyState.result : null;
+
+  const fetchHistory = (accountId: string, q: QueueFilter) => {
+    setHistoryState(null);
+    startTransition(async () => {
+      const result = await getMatchHistory(accountId, q);
+      setHistoryState({ accountId, queue: q, result });
+    });
+  };
 
   useEffect(() => {
     if (!selectedAccount?.id) return;
-
     let cancelled = false;
-
     startTransition(async () => {
-      const result = await getMatchHistory(selectedAccount.id);
-      if (!cancelled) setHistoryState({ accountId: selectedAccount.id, result });
+      const result = await getMatchHistory(selectedAccount.id, queue);
+      if (!cancelled) setHistoryState({ accountId: selectedAccount.id, queue, result });
     });
-
-    return () => {
-      cancelled = true;
-    };
-  }, [selectedAccount?.id]);
+    return () => { cancelled = true; };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedAccount?.id, queue]);
 
   return (
     <div className="animate-enter space-y-4">
@@ -79,19 +84,34 @@ export function MatchHistoryPanel({ snapshot }: { snapshot: DashboardSnapshot })
               </p>
             </div>
             {selectedAccount ? (
-              <Button
-                className="self-start"
-                disabled={isPending}
-                onClick={() => {
-                  setHistoryState(null);
-                  startTransition(async () => {
-                    setHistoryState({ accountId: selectedAccount.id, result: await getMatchHistory(selectedAccount.id) });
-                  });
-                }}
-                variant="secondary"
-              >
-                {isPending ? "Consultando..." : "Actualizar historial"}
-              </Button>
+              <div className="flex flex-col items-end gap-2">
+                <Button
+                  className="self-start"
+                  disabled={isPending}
+                  onClick={() => fetchHistory(selectedAccount.id, queue)}
+                  variant="secondary"
+                >
+                  {isPending ? "Consultando..." : "Actualizar historial"}
+                </Button>
+                <div className="flex overflow-hidden rounded-lg border border-white/12 bg-black/20">
+                  {(["soloq", "flex"] as const).map((q) => (
+                    <button
+                      className={cn(
+                        "px-3 py-1.5 text-xs font-black transition",
+                        q === queue
+                          ? "bg-cyan-500/20 text-cyan-300"
+                          : "text-slate-400 hover:bg-white/6 hover:text-slate-200",
+                      )}
+                      disabled={isPending}
+                      key={q}
+                      onClick={() => setQueue(q)}
+                      type="button"
+                    >
+                      {q === "soloq" ? "Solo/Duo" : "Flex"}
+                    </button>
+                  ))}
+                </div>
+              </div>
             ) : null}
           </div>
         </div>
@@ -109,7 +129,7 @@ export function MatchHistoryPanel({ snapshot }: { snapshot: DashboardSnapshot })
               ) : selectedHistory?.error ? (
                 <HistoryMessage title="No se pudo cargar el historial" description={selectedHistory.error} />
               ) : selectedHistory?.error === null && selectedHistory.matches.length ? (
-                <MatchList matches={selectedHistory.matches} />
+                <MatchList matches={selectedHistory.matches} routingPlatform={selectedHistory.account.routingPlatform ?? ""} />
               ) : selectedHistory ? (
                 <HistoryMessage
                   title="Sin partidas recientes"
@@ -180,7 +200,7 @@ function HistoryAccountsList({
   );
 }
 
-function MatchList({ matches }: { matches: MatchHistoryItem[] }) {
+function MatchList({ matches, routingPlatform }: { matches: MatchHistoryItem[]; routingPlatform: string }) {
   const [expandedMatchId, setExpandedMatchId] = useState<string | null>(null);
 
   return (
@@ -190,6 +210,7 @@ function MatchList({ matches }: { matches: MatchHistoryItem[] }) {
           expanded={expandedMatchId === match.id}
           key={match.id}
           match={match}
+          routingPlatform={routingPlatform}
           onToggle={() => setExpandedMatchId((current) => (current === match.id ? null : match.id))}
         />
       ))}
@@ -201,12 +222,22 @@ function MatchCard({
   expanded,
   match,
   onToggle,
+  routingPlatform,
 }: {
   expanded: boolean;
   match: MatchHistoryItem;
   onToggle: () => void;
+  routingPlatform: string;
 }) {
   const won = match.result === "Victoria";
+
+  const { selectedRank, selectedOpLabel } = (() => {
+    const all = match.teams.flatMap((t) => t.participants);
+    const sorted = [...all].sort((a, b) => b.opScore - a.opScore);
+    const idx = sorted.findIndex((p) => p.selected);
+    const selected = all.find((p) => p.selected) ?? null;
+    return { selectedRank: idx === -1 ? null : idx + 1, selectedOpLabel: selected?.opLabel ?? null };
+  })();
 
   return (
     <article
@@ -227,6 +258,11 @@ function MatchCard({
             <div className="flex flex-wrap items-center gap-2">
               <Badge tone={won ? "teal" : "danger"}>{match.result}</Badge>
               <Badge tone="neutral">{match.queue}</Badge>
+              {selectedRank !== null ? (
+                <span className={cn("inline-flex items-center justify-center rounded-full border px-2 py-0.5 text-[10px] font-black", rankStyle(selectedRank))}>
+                  {selectedOpLabel ?? `#${selectedRank}`}
+                </span>
+              ) : null}
             </div>
             <h2 className="mt-2 truncate text-base font-black text-white">{match.championName}</h2>
             <p className="mt-1 text-xs font-medium text-slate-500">
@@ -247,7 +283,11 @@ function MatchCard({
         <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
           <StatPill label="Daño" value={formatNumber(match.damageDealtToChampions)} detail="a campeones" />
           <StatPill label="Recibido" value={formatNumber(match.damageTaken)} detail="daño total" />
-          <StatPill label="Oro" value={formatNumber(match.goldEarned)} detail="ganado" />
+          <StatPill
+            label="PL"
+            value={match.lpChange !== null ? (match.lpChange > 0 ? "+" : "") + match.lpChange : "—"}
+            detail={match.lpChange !== null ? (match.lpChange >= 0 ? "ganados" : "perdidos") : "no disponible"}
+          />
           <div className="min-w-0 rounded-xl border border-cyan-200/10 bg-black/20 p-3">
             <p className="text-[10px] font-black uppercase tracking-[0.12em] text-slate-500">Hechizos</p>
             <div className="mt-2 flex gap-2">
@@ -261,19 +301,35 @@ function MatchCard({
           </div>
         </div>
 
-        <div className="min-w-0">
-          <p className="text-[10px] font-black uppercase tracking-[0.12em] text-slate-500">Objetos</p>
-          <div className="mt-2 flex flex-wrap gap-2">
-            {match.items.length > 0 ? (
-              match.items.map((item, index) => <DataDragonIcon icon={item} key={`${match.id}-item-${index}-${item.id}`} />)
-            ) : (
-              <span className="text-sm font-medium text-slate-500">Sin objetos registrados</span>
-            )}
+        <div className="flex min-w-0 flex-col justify-between gap-3">
+          <div>
+            <p className="text-[10px] font-black uppercase tracking-[0.12em] text-slate-500">Objetos</p>
+            <div className="mt-2 flex flex-wrap gap-2">
+              {match.items.length > 0 ? (
+                match.items.map((item, index) => <DataDragonIcon icon={item} key={`${match.id}-item-${index}-${item.id}`} />)
+              ) : (
+                <span className="text-sm font-medium text-slate-500">Sin objetos registrados</span>
+              )}
+            </div>
+          </div>
+          <div className="flex justify-end">
+            <Button
+              aria-expanded={expanded}
+              className="h-8 px-3 text-xs"
+              onClick={onToggle}
+              type="button"
+              variant="ghost"
+            >
+              {expanded ? "Contraer partida" : "Ampliar partida"}
+              <span aria-hidden="true" className="text-sm leading-none">
+                {expanded ? "⌃" : "⌄"}
+              </span>
+            </Button>
           </div>
         </div>
       </div>
 
-      {expanded ? <ExpandedMatchDetails match={match} /> : null}
+      {expanded ? <ExpandedMatchDetails match={match} routingPlatform={routingPlatform} /> : null}
 
       <div className="flex justify-end border-t border-white/8 px-4 py-3">
         <Button
@@ -293,7 +349,20 @@ function MatchCard({
   );
 }
 
-function ExpandedMatchDetails({ match }: { match: MatchHistoryItem }) {
+function ExpandedMatchDetails({ match, routingPlatform }: { match: MatchHistoryItem; routingPlatform: string }) {
+  const allParticipants = match.teams.flatMap((t) => t.participants);
+  const sorted = [...allParticipants].sort((a, b) => b.opScore - a.opScore);
+  const rankMap = new Map(sorted.map((p, i) => [p.participantId, i + 1]));
+
+  const [tierMap, setTierMap] = useState<Record<string, ParticipantRankInfo>>({});
+
+  useEffect(() => {
+    if (!routingPlatform) return;
+    const puuids = allParticipants.map((p) => p.puuid);
+    getMatchParticipantTiers(puuids, routingPlatform).then(setTierMap);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [match.matchId, routingPlatform]);
+
   return (
     <div className="border-t border-cyan-200/10 bg-black/18 p-4">
       <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
@@ -305,7 +374,7 @@ function ExpandedMatchDetails({ match }: { match: MatchHistoryItem }) {
         </div>
         <Badge tone="neutral">{match.matchId}</Badge>
       </div>
-      <div className="grid gap-3 2xl:grid-cols-2">
+      <div className="grid gap-3">
         {match.teams.map((team) => (
           <div
             className={cn(
@@ -327,7 +396,12 @@ function ExpandedMatchDetails({ match }: { match: MatchHistoryItem }) {
             </div>
             <div className="divide-y divide-white/8">
               {team.participants.map((participant) => (
-                <ParticipantRow key={participant.participantId} participant={participant} />
+                <ParticipantRow
+                  key={participant.participantId}
+                  participant={participant}
+                  rank={rankMap.get(participant.participantId) ?? 10}
+                  tier={tierMap[participant.puuid] ?? null}
+                />
               ))}
             </div>
           </div>
@@ -337,16 +411,72 @@ function ExpandedMatchDetails({ match }: { match: MatchHistoryItem }) {
   );
 }
 
-function ParticipantRow({ participant }: { participant: MatchHistoryItem["teams"][number]["participants"][number] }) {
+const TIER_EMBLEMS: Partial<Record<string, string>> = {
+  IRON: "/emblem-small/emblem-iron.webp",
+  BRONZE: "/emblem-small/emblem-bronze.webp",
+  SILVER: "/emblem-small/emblem-silver.webp",
+  GOLD: "/emblem-small/emblem-gold.webp",
+  PLATINUM: "/emblem-small/emblem-platinum.webp",
+  EMERALD: "/emblem-small/emblem-emerald.webp",
+  DIAMOND: "/emblem-small/emblem-diamond.webp",
+  MASTER: "/emblem-small/emblem-master.webp",
+  GRANDMASTER: "/emblem-small/emblem-grandmaster.webp",
+  CHALLENGER: "/emblem-small/emblem-challenger.webp",
+};
+
+function TierIcon({ rank }: { rank: ParticipantRankInfo | null }) {
+  const src = rank ? TIER_EMBLEMS[rank.tier] : null;
+  return (
+    <div className="flex w-14 shrink-0 flex-col items-center gap-0.5">
+      <div className="relative size-14 overflow-hidden">
+        {src ? (
+          <Image
+            alt=""
+            aria-hidden="true"
+            className="absolute left-1/2 top-1/2 h-auto w-[320%] max-w-none -translate-x-1/2 -translate-y-1/2 object-contain"
+            height={112}
+            priority={false}
+            src={src}
+            width={112}
+          />
+        ) : (
+          <div className="size-full rounded border border-white/8 bg-white/5" />
+        )}
+      </div>
+      {rank?.division ? (
+        <span className="text-[9px] font-black leading-none tracking-wide text-slate-400">
+          {rank.division}
+        </span>
+      ) : null}
+    </div>
+  );
+}
+
+function rankStyle(rank: number): string {
+  if (rank === 1) return "bg-amber-400/25 text-amber-300 border-amber-400/40";
+  if (rank === 2) return "bg-slate-300/15 text-slate-300 border-slate-400/30";
+  if (rank === 3) return "bg-amber-700/20 text-amber-500 border-amber-600/30";
+  if (rank <= 5)  return "bg-cyan-500/10 text-cyan-400/80 border-cyan-500/18";
+  return "bg-white/5 text-slate-500 border-white/8";
+}
+
+function ParticipantRow({ participant, rank, tier }: { participant: MatchHistoryItem["teams"][number]["participants"][number]; rank: number; tier: ParticipantRankInfo | null }) {
+  const style = rankStyle(rank);
   return (
     <div
       className={cn(
-        "grid gap-3 px-4 py-3 lg:grid-cols-[minmax(13rem,1.2fr)_minmax(11rem,0.75fr)_minmax(12rem,0.9fr)_minmax(9rem,0.7fr)]",
+        "grid gap-3 px-4 py-3 lg:grid-cols-[minmax(15rem,1.3fr)_minmax(10rem,0.7fr)_minmax(12rem,0.9fr)_minmax(9rem,0.7fr)]",
         participant.selected && "bg-amber-300/8",
       )}
     >
-      <div className="flex min-w-0 items-center gap-3">
-        <ChampionPortrait imageUrl={participant.championImageUrl} name={participant.championName} />
+      <div className="flex min-w-0 items-center gap-2">
+        <TierIcon rank={tier} />
+        <div className="relative shrink-0">
+          <ChampionPortrait imageUrl={participant.championImageUrl} name={participant.championName} />
+          <span className={cn("absolute -bottom-1.5 -right-1.5 flex size-5 items-center justify-center rounded-full border text-[10px] font-black", style)}>
+            {rank}
+          </span>
+        </div>
         <div className="min-w-0">
           <div className="flex min-w-0 flex-wrap items-center gap-2">
             <p className="truncate text-sm font-black text-white">{participant.riotId}</p>
@@ -361,9 +491,8 @@ function ParticipantRow({ participant }: { participant: MatchHistoryItem["teams"
         </div>
       </div>
 
-      <div className="grid grid-cols-3 gap-2">
-        <CompactMetric label="OP" value={participant.opScore.toFixed(2)} />
-        <CompactMetric label="KDA" value={`${participant.kills}/${participant.deaths}/${participant.assists}`} />
+      <div className="grid grid-cols-2 gap-2">
+        <CompactMetric label="K/D/A" value={`${participant.kills}/${participant.deaths}/${participant.assists}`} />
         <CompactMetric label="CS" value={String(participant.creepScore)} />
       </div>
 

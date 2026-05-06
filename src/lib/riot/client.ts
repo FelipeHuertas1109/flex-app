@@ -154,6 +154,7 @@ export type RiotMatchParticipantDto = {
   wardsKilled: number;
   wardsPlaced: number;
   win: boolean;
+  challenges?: Record<string, number>;
 };
 
 const EMPTY_QUEUE_STATS: QueueStats = {
@@ -413,10 +414,12 @@ export async function fetchMatchIdsByPuuid(
   platform: string,
   apiKey: string,
   count = 20,
+  queue?: number,
 ): Promise<string[]> {
   const headers = { "X-Riot-Token": apiKey };
   const regionalRouting = regionalRoutingFromPlatform(platform);
-  const matchIdsUrl = `https://${regionalRouting}.api.riotgames.com/lol/match/v5/matches/by-puuid/${encodeURIComponent(puuid)}/ids?start=0&count=${count}`;
+  const queueParam = queue ? `&queue=${queue}` : "";
+  const matchIdsUrl = `https://${regionalRouting}.api.riotgames.com/lol/match/v5/matches/by-puuid/${encodeURIComponent(puuid)}/ids?start=0&count=${count}${queueParam}`;
 
   return fetchRiotJson<string[]>(matchIdsUrl, {
     headers,
