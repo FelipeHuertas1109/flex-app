@@ -71,7 +71,7 @@ export function LiveGamePanel({ snapshot }: { snapshot: DashboardSnapshot }) {
     : null;
   const displayedLiveState =
     cachedLiveState ??
-    (liveState?.accountId === selectedAccount?.id && liveState.syncVersion === syncVersion
+    (liveState && liveState.accountId === selectedAccount?.id && liveState.syncVersion === syncVersion
       ? liveState.state
       : null);
 
