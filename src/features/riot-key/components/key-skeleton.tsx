@@ -4,7 +4,7 @@ import { Panel } from "@/components/ui/panel";
 
 export function KeySkeleton() {
   return (
-    <AppShell>
+    <AppShell user={null}>
       <div className="mx-auto max-w-6xl space-y-6" aria-label="Cargando key">
         <section className="grid gap-4 xl:grid-cols-[minmax(0,1.18fr)_minmax(340px,0.82fr)]">
           <Panel className="overflow-hidden">

@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { AppShell } from "@/components/layout/app-shell";
+import { mapUserToShellUser } from "@/lib/auth/shell-user";
 import { getDashboardSnapshot } from "@/features/dashboard/data/queries";
 import { DashboardView } from "@/features/dashboard/components/dashboard-view";
 import { createClient } from "@/lib/supabase/server";
@@ -26,11 +27,12 @@ export async function DashboardScreen({
     redirect("/login");
   }
 
+  const shellUser = mapUserToShellUser(user)!;
   const snapshot = await getDashboardSnapshot(user.id);
 
   if (!snapshot) {
     return (
-      <AppShell>
+      <AppShell user={shellUser}>
         <div className="flex h-[calc(100vh-200px)] items-center justify-center">
           <Panel className="max-w-md bg-black/40 p-8 text-center backdrop-blur-xl">
             <h2 className="text-2xl font-black text-white">Únete a un Flex Queue</h2>
@@ -56,7 +58,7 @@ export async function DashboardScreen({
   }
 
   return (
-    <AppShell>
+    <AppShell user={shellUser}>
       <DashboardView queue={queue} snapshot={snapshot} sort={sort} sortDirection={sortDirection} />
     </AppShell>
   );

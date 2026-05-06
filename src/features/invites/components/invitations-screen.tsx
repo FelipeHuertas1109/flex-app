@@ -4,8 +4,16 @@ import { Panel } from "@/components/ui/panel";
 import { Badge } from "@/components/ui/badge";
 import { AcceptPendingInvitesButton } from "@/features/invites/components/accept-invites-button";
 import { getPendingInvitesInbox } from "@/features/invites/data/queries";
+import { createClient } from "@/lib/supabase/server";
+import { mapUserToShellUser } from "@/lib/auth/shell-user";
 
 export async function InvitationsScreen() {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  const shellUser = mapUserToShellUser(user);
+
   const inbox = await getPendingInvitesInbox();
 
   const formatted = (iso: string) =>
@@ -14,7 +22,7 @@ export async function InvitationsScreen() {
     );
 
   return (
-    <AppShell>
+    <AppShell user={shellUser}>
       <div className="animate-enter mx-auto max-w-2xl space-y-6">
         <div>
           <h1 className="text-3xl font-black tracking-tight text-white">Invitaciones</h1>

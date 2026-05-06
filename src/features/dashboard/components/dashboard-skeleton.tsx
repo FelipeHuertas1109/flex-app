@@ -4,7 +4,7 @@ import { Panel } from "@/components/ui/panel";
 
 export function DashboardSkeleton() {
   return (
-    <AppShell>
+    <AppShell user={null}>
       <div className="space-y-5" aria-label="Cargando dashboard">
         <section className="grid gap-4 xl:grid-cols-[minmax(0,1.58fr)_minmax(360px,0.8fr)]">
           <div className="overflow-hidden rounded-xl border border-cyan-200/14 bg-surface/86 p-5 shadow-2xl shadow-black/40 ring-1 ring-white/7 sm:p-7">

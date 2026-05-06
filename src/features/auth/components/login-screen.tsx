@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { FxBrandMark } from "@/components/layout/fx-brand-mark";
 import { signInWithGoogle } from "@/features/auth/actions";
 
 const sessionHighlights = [
@@ -33,12 +34,7 @@ export function LoginScreen() {
       <div className="mx-auto flex min-h-[calc(100vh-3rem)] w-full max-w-7xl flex-col">
         <header className="flex items-center justify-between gap-4">
           <Link className="group flex items-center" href="/">
-            <div className="relative z-10 flex size-12 shrink-0 items-center justify-center overflow-hidden rounded-xl border border-cyan-300/35 bg-[#071a33] text-lg font-black text-white shadow-xl shadow-cyan-500/20">
-              <span className="absolute -left-3 -top-3 size-10 rounded-full bg-cyan-300/45 blur-xl" />
-              <span className="absolute -right-4 bottom-0 size-10 rounded-full bg-violet-500/55 blur-xl" />
-              <span className="absolute inset-0 bg-[linear-gradient(135deg,rgba(25,216,255,0.42),transparent_42%,rgba(124,60,255,0.42))]" />
-              <span className="relative z-10 tracking-tight">FX</span>
-            </div>
+            <FxBrandMark />
             <div className="grid grid-cols-[0fr] opacity-0 transition-all duration-500 ease-out group-hover:grid-cols-[1fr] group-hover:opacity-100">
               <div className="overflow-hidden">
                 <div className="-translate-x-full pl-3 transition-transform duration-500 ease-out group-hover:translate-x-0 whitespace-nowrap">

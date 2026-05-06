@@ -4,8 +4,16 @@ import { Panel } from "@/components/ui/panel";
 import { getRiotApiKeySnapshot } from "@/features/riot-key/data/queries";
 import { KeyAgeCounter } from "@/features/riot-key/components/key-age-counter";
 import { RiotApiKeyForm } from "@/features/riot-key/components/key-form";
+import { createClient } from "@/lib/supabase/server";
+import { mapUserToShellUser } from "@/lib/auth/shell-user";
 
 export async function KeyScreen() {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  const shellUser = mapUserToShellUser(user);
+
   const snapshot = await getRiotApiKeySnapshot();
   const updatedAtLabel = snapshot.updatedAt
     ? new Intl.DateTimeFormat("es-CO", {
@@ -22,7 +30,7 @@ export async function KeyScreen() {
     : "Sin clave";
 
   return (
-    <AppShell>
+    <AppShell user={shellUser}>
       <div className="animate-enter mx-auto max-w-6xl space-y-6">
         <section className="grid gap-4 xl:grid-cols-[minmax(0,1.18fr)_minmax(340px,0.82fr)]">
           <Panel className="overflow-hidden">
