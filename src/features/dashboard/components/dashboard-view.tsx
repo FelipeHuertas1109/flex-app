@@ -650,7 +650,7 @@ function MembersScrollPanel({
           <Badge tone="neutral">{members.length}</Badge>
         </div>
       </div>
-      <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-5 py-4">
+      <div className="members-scroll-glass min-h-0 flex-1 overflow-y-auto overscroll-contain px-5 py-4">
         <div className="divide-y divide-cyan-200/10">
           {sharedAccountsCount > 0 ? (
             <div className="flex items-center justify-between gap-3 pb-3">

@@ -6,6 +6,8 @@ type AppShellProps = {
   children: ReactNode;
 };
 
+const shellBand = "mx-auto w-4/5 max-w-[1720px] px-4 sm:px-6 lg:px-8";
+
 export function AppShell({ children }: AppShellProps) {
   return (
     <div className="min-h-screen overflow-x-hidden">
@@ -13,7 +15,7 @@ export function AppShell({ children }: AppShellProps) {
       <div className="pointer-events-none fixed inset-x-0 top-0 -z-10 h-72 bg-[radial-gradient(ellipse_at_top,rgba(25,216,255,0.14),transparent_62%)]" />
 
       <header className="sticky top-0 z-20 border-b border-cyan-200/12 bg-[#030816]/82 shadow-2xl shadow-black/35 backdrop-blur-2xl">
-        <div className="relative mx-auto flex min-h-18 w-full max-w-[1720px] items-center justify-between gap-4 px-4 py-3 sm:px-6 lg:px-8">
+        <div className={`relative flex min-h-18 items-center justify-between gap-4 py-3 ${shellBand}`}>
           <div className="absolute inset-x-0 bottom-0 h-px bg-linear-to-r from-transparent via-cyan-300/45 to-transparent" />
 
           <div className="flex min-w-0 items-center gap-3">
@@ -47,14 +49,7 @@ export function AppShell({ children }: AppShellProps) {
           </div>
         </div>
       </header>
-      <main className="mx-auto w-full max-w-[1720px] px-4 py-5 sm:px-6 lg:px-8">
-        <div className="flex flex-col gap-6 lg:flex-row">
-          <div className="flex-1 lg:w-3/4">{children}</div>
-          <aside className="shrink-0 lg:w-1/4 lg:sticky lg:top-24">
-            {/* Sidebar content could go here or be passed as a prop */}
-          </aside>
-        </div>
-      </main>
+      <main className={`py-5 ${shellBand}`}>{children}</main>
     </div>
   );
 }
