@@ -3,7 +3,7 @@
 import { syncAllAccounts } from "@/features/accounts/actions";
 
 /** Minutos entre syncs automáticos si no defines env (5-120). */
-const DEFAULT_MINUTES = 5;
+const DEFAULT_MINUTES = 30;
 const MIN_MINUTES = 5;
 const MAX_MINUTES = 120;
 
