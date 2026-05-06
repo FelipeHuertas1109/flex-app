@@ -6,15 +6,15 @@ import { signInWithGoogle } from "@/features/auth/actions";
 const sessionHighlights = [
   {
     label: "Ranking",
-    value: "Squads",
+    value: "Solo & Flex",
   },
   {
-    label: "Métricas",
-    value: "Precisión",
+    label: "Estadísticas",
+    value: "Métricas Clave",
   },
   {
-    label: "Sincroniza",
-    value: "Riot API",
+    label: "Sincronización",
+    value: "En Tiempo Real",
   },
 ];
 
@@ -27,7 +27,7 @@ const previewRows = [
 export function LoginScreen() {
   return (
     <main className="relative min-h-screen overflow-hidden px-4 py-6 sm:px-6 lg:px-8">
-      <div className="pointer-events-none fixed inset-0 -z-10 surface-pattern" />
+      <div className="pointer-events-none fixed inset-0 -z-10 surface-pattern backdrop-blur-[3px]" />
       <div className="pointer-events-none absolute left-1/2 top-0 -z-10 h-96 w-[min(900px,100vw)] -translate-x-1/2 bg-[radial-gradient(ellipse_at_top,rgba(25,216,255,0.2),transparent_62%)]" />
 
       <div className="mx-auto flex min-h-[calc(100vh-3rem)] w-full max-w-7xl flex-col">
@@ -43,7 +43,7 @@ export function LoginScreen() {
               <div className="overflow-hidden">
                 <div className="-translate-x-full pl-3 transition-transform duration-500 ease-out group-hover:translate-x-0 whitespace-nowrap">
                   <p className="text-lg font-black tracking-tight text-white">Flex App</p>
-                  <p className="text-xs font-medium text-slate-300">Equipos, cuentas y rendimiento</p>
+                  <p className="text-xs font-medium text-slate-300">Domina el meta con tu escuadra</p>
                 </div>
               </div>
             </div>
@@ -78,7 +78,7 @@ export function LoginScreen() {
                     Continuar con Google
                   </Button>
                   <p className="mt-4 max-w-md text-xs leading-5 text-slate-500">
-                    Sincronización segura y acceso rápido a tus stats para que enfoques tu energía en ganar la partida.
+                    Acceso rápido y seguro. Centraliza las métricas de tu equipo en tiempo real y toma la ventaja desde el draft.
                   </p>
                 </form>
 

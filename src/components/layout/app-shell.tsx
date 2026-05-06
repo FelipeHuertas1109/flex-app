@@ -9,7 +9,7 @@ type AppShellProps = {
 export function AppShell({ children }: AppShellProps) {
   return (
     <div className="min-h-screen overflow-x-hidden">
-      <div className="pointer-events-none fixed inset-0 -z-10 surface-pattern" />
+      <div className="pointer-events-none fixed inset-0 -z-10 surface-pattern backdrop-blur-[3px]" />
       <div className="pointer-events-none fixed inset-x-0 top-0 -z-10 h-72 bg-[radial-gradient(ellipse_at_top,rgba(25,216,255,0.14),transparent_62%)]" />
 
       <header className="sticky top-0 z-20 border-b border-cyan-200/12 bg-[#030816]/82 shadow-2xl shadow-black/35 backdrop-blur-2xl">
@@ -28,7 +28,7 @@ export function AppShell({ children }: AppShellProps) {
             </Link>
             <div className="min-w-0">
               <p className="truncate text-lg font-black tracking-tight text-white">Flex App</p>
-              <p className="truncate text-xs font-medium text-slate-300">Equipos, cuentas y rendimiento</p>
+              <p className="truncate text-xs font-medium text-slate-300">Domina el meta con tu escuadra</p>
             </div>
           </div>
 
