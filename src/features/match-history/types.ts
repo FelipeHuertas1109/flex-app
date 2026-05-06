@@ -92,3 +92,17 @@ export type MatchHistoryResult =
   | {
       error: string;
     };
+
+export type MatchHistoryPreviewResult =
+  | {
+      entries: {
+        accountId: string;
+        matches: MatchHistoryItem[];
+        queue: "soloq" | "flex";
+      }[];
+      error: null;
+      updatedAt: string;
+    }
+  | {
+      error: string;
+    };

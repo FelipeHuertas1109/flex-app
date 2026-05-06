@@ -19,6 +19,7 @@ import type {
   MatchHistoryAccount,
   MatchHistoryItem,
   MatchHistoryParticipant,
+  MatchHistoryPreviewResult,
   MatchHistoryResult,
 } from "@/features/match-history/types";
 
@@ -44,27 +45,34 @@ const TEAM_LABELS: Record<number, string> = {
   200: "Rojo",
 };
 
+type AuthorizedRiotAccount = {
+  id: string;
+  game_name: string;
+  tag_line: string;
+  puuid: string | null;
+  routing_platform: string | null;
+};
+
 type AuthorizedAccountRow = {
   group_id: string;
   is_shared: boolean | null;
   profiles: { full_name: string | null; email: string } | { full_name: string | null; email: string }[] | null;
-  riot_accounts:
-    | {
-        id: string;
-        game_name: string;
-        tag_line: string;
-        puuid: string | null;
-        routing_platform: string | null;
-      }
-    | {
-        id: string;
-        game_name: string;
-        tag_line: string;
-        puuid: string | null;
-        routing_platform: string | null;
-      }[]
-    | null;
+  riot_accounts: AuthorizedRiotAccount | AuthorizedRiotAccount[] | null;
 };
+
+type AuthorizedAccountResult =
+  | {
+      error: string;
+    }
+  | {
+      error: null;
+      groupAccount: AuthorizedAccountRow;
+      profile: { full_name: string | null; email: string } | null | undefined;
+      riotAccount: AuthorizedRiotAccount;
+      row: AuthorizedAccountRow;
+    };
+
+type MatchHistoryPreviewEntry = Extract<MatchHistoryPreviewResult, { error: null }>["entries"][number];
 
 function normalizeJoinedRow<T>(value: T | T[] | null | undefined) {
   return Array.isArray(value) ? value[0] : value;
@@ -338,8 +346,9 @@ function toHistoryItem(
 
 export type QueueFilter = "soloq" | "flex";
 const QUEUE_IDS: Record<QueueFilter, number> = { soloq: 420, flex: 440 };
+const QUEUE_FILTERS = Object.keys(QUEUE_IDS) as QueueFilter[];
 
-export async function getMatchHistory(groupAccountId: string, queue: QueueFilter = "soloq"): Promise<MatchHistoryResult> {
+async function getAuthorizedAccount(groupAccountId: string): Promise<AuthorizedAccountResult> {
   const supabase = await createClient();
   const {
     data: { user },
@@ -376,6 +385,53 @@ export async function getMatchHistory(groupAccountId: string, queue: QueueFilter
     return { error: "Cuenta sin Riot ID" };
   }
 
+  return { error: null, groupAccount: groupAccount as unknown as AuthorizedAccountRow, profile, riotAccount, row };
+}
+
+export async function getCachedMatchHistory(
+  groupAccountId: string,
+  queue: QueueFilter = "soloq",
+  limit = 20,
+): Promise<MatchHistoryResult> {
+  const authorized = await getAuthorizedAccount(groupAccountId);
+  if (authorized.error !== null) return { error: authorized.error };
+
+  try {
+    const platform = authorized.riotAccount.routing_platform?.trim().toLowerCase() ?? null;
+    const admin = createAdminClient();
+    const history = await readMatchHistoryFromDb(
+      authorized.riotAccount.id,
+      QUEUE_IDS[queue],
+      authorized.riotAccount.puuid ?? "",
+      admin,
+      limit,
+    );
+
+    return {
+      account: {
+        id: groupAccountId,
+        label: `${authorized.riotAccount.game_name}#${authorized.riotAccount.tag_line}`,
+        ownerLabel: authorized.row.is_shared
+          ? "Cuenta compartida"
+          : authorized.profile?.full_name || authorized.profile?.email || "Miembro",
+        region: platform ? routingPlatformToRegionLabel(platform) : "Sin region",
+        routingPlatform: platform,
+      },
+      error: null,
+      matches: history,
+      updatedAt: new Date().toISOString(),
+    };
+  } catch (error) {
+    console.error("getCachedMatchHistory:", error);
+    return { error: "No se pudo leer el historial guardado." };
+  }
+}
+
+export async function syncSelectedMatchHistory(groupAccountId: string, queue: QueueFilter = "soloq"): Promise<MatchHistoryResult> {
+  const authorized = await getAuthorizedAccount(groupAccountId);
+  if (authorized.error !== null) return { error: authorized.error };
+
+  const { profile, riotAccount, row } = authorized;
   const platform = riotAccount.routing_platform?.trim().toLowerCase();
   if (!platform) {
     return { error: "Cuenta sin region definida." };
@@ -403,13 +459,12 @@ export async function getMatchHistory(groupAccountId: string, queue: QueueFilter
           })
           .eq("id", riotAccount.id);
       } catch (error) {
-        console.error("getMatchHistory puuid update:", error);
+        console.error("syncSelectedMatchHistory puuid update:", error);
       }
     }
 
     const admin = createAdminClient();
 
-    // 1. IDs ya guardados en DB para esta cuenta + cola
     const { data: dbRows } = await admin
       .from("matches")
       .select("match_id")
@@ -418,7 +473,6 @@ export async function getMatchHistory(groupAccountId: string, queue: QueueFilter
 
     const cachedIds = new Set(dbRows?.map((r) => r.match_id as string) ?? []);
 
-    // 2. Últimos 20 de Riot + mapas de Data Dragon en paralelo
     const [champions, itemsMap, summonerSpellsMap, riotMatchIds] = await Promise.all([
       getChampionsByKeyMap(),
       getItemsMap(),
@@ -426,19 +480,17 @@ export async function getMatchHistory(groupAccountId: string, queue: QueueFilter
       fetchMatchIdsByPuuid(puuid, platform, riotApiKey.apiKey, 20, QUEUE_IDS[queue]),
     ]);
 
-    // 3. Delta: solo las que no están en DB
     const newMatchIds = riotMatchIds.filter((id) => !cachedIds.has(id));
 
-    // 4. Fetchear solo las nuevas
     if (newMatchIds.length > 0) {
       const newRiotMatches = await runWithConcurrency(
-        newMatchIds, 3,
+        newMatchIds,
+        3,
         async (matchId) => fetchMatchById(matchId, platform, riotApiKey.apiKey!),
       );
       await upsertMatchesToDb(newRiotMatches, riotAccount.id, puuid, champions, itemsMap, summonerSpellsMap, platform, admin);
     }
 
-    // 5. Leer las últimas 20 desde DB y reconstruir
     const history = await readMatchHistoryFromDb(riotAccount.id, QUEUE_IDS[queue], puuid, admin);
 
     return {
@@ -454,17 +506,79 @@ export async function getMatchHistory(groupAccountId: string, queue: QueueFilter
       updatedAt: new Date().toISOString(),
     };
   } catch (error) {
-    console.error("getMatchHistory:", error);
+    console.error("syncSelectedMatchHistory:", error);
     return {
       error:
         error instanceof RiotApiRequestError
           ? error.message
-          : "No se pudo consultar el historial de partidas.",
+          : "No se pudo actualizar el historial de partidas.",
     };
   }
 }
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export async function getMatchHistory(groupAccountId: string, queue: QueueFilter = "soloq"): Promise<MatchHistoryResult> {
+  return getCachedMatchHistory(groupAccountId, queue);
+}
+
+export async function getGroupMatchHistoryPreview(groupId: string, limit = 3): Promise<MatchHistoryPreviewResult> {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  if (!user) return { error: "No autorizado" };
+
+  const { data: isMember } = await supabase
+    .from("group_members")
+    .select("id")
+    .eq("group_id", groupId)
+    .eq("user_id", user.id)
+    .single();
+
+  if (!isMember) {
+    return { error: "No perteneces a este grupo" };
+  }
+
+  try {
+    const admin = createAdminClient();
+    const { data: accountsData, error: accountsError } = await admin
+      .from("group_accounts")
+      .select("id, riot_accounts(id, puuid)")
+      .eq("group_id", groupId);
+
+    if (accountsError) return { error: "No se pudieron leer las cuentas del grupo." };
+
+    const accountRows = (accountsData ?? []).flatMap((row) => {
+      const riot = normalizeJoinedRow(row.riot_accounts as { id: string; puuid: string | null } | { id: string; puuid: string | null }[] | null);
+      return riot?.id ? [{ groupAccountId: row.id as string, riotAccountId: riot.id, puuid: riot.puuid ?? "" }] : [];
+    });
+
+    const entries: MatchHistoryPreviewEntry[] = [];
+
+    await Promise.all(accountRows.map(async (account) => {
+      await Promise.all(QUEUE_FILTERS.map(async (queueFilter) => {
+        const result = await readMatchHistoryFromDb(
+          account.riotAccountId,
+          QUEUE_IDS[queueFilter],
+          account.puuid,
+          admin,
+          limit,
+        );
+        entries.push({
+          accountId: account.groupAccountId,
+          matches: result,
+          queue: queueFilter,
+        });
+      }));
+    }));
+
+    return { entries, error: null, updatedAt: new Date().toISOString() };
+  } catch (error) {
+    console.error("getGroupMatchHistoryPreview:", error);
+    return { error: "No se pudo precargar el historial guardado." };
+  }
+}
+
 type AdminClient = ReturnType<typeof createAdminClient>;
 
 async function upsertMatchesToDb(
@@ -477,6 +591,9 @@ async function upsertMatchesToDb(
   platform: string,
   admin: AdminClient,
 ): Promise<void> {
+  const matchRows = [];
+  const participantRows = [];
+
   for (const match of riotMatches) {
     const participant = match.info.participants.find((p) => p.puuid === selectedPuuid);
     if (!participant) continue;
@@ -487,8 +604,7 @@ async function upsertMatchesToDb(
       ? new Date(match.info.gameEndTimestamp).toISOString()
       : new Date(match.info.gameStartTimestamp ?? match.info.gameCreation ?? 0).toISOString();
 
-    // Upsert partida principal (cuenta seguida)
-    await admin.from("matches").upsert({
+    matchRows.push({
       riot_account_id: riotAccountId,
       match_id: historyItem.matchId,
       queue_id: queueId,
@@ -520,10 +636,9 @@ async function upsertMatchesToDb(
       items: historyItem.items,
       summoner_spells: historyItem.summonerSpells,
       played_at: playedAt,
-    }, { onConflict: "riot_account_id,match_id", ignoreDuplicates: true });
+    });
 
-    // Upsert los 10 participantes
-    const participantRows = historyItem.teams.flatMap((team) =>
+    participantRows.push(...historyItem.teams.flatMap((team) =>
       team.participants.map((p) => ({
         match_id: historyItem.matchId,
         puuid: p.puuid,
@@ -546,8 +661,14 @@ async function upsertMatchesToDb(
         items: p.items,
         summoner_spells: p.summonerSpells,
       })),
-    );
+    ));
+  }
 
+  if (matchRows.length > 0) {
+    await admin.from("matches").upsert(matchRows, { onConflict: "riot_account_id,match_id", ignoreDuplicates: true });
+  }
+
+  if (participantRows.length > 0) {
     await admin.from("match_participants").upsert(participantRows, { onConflict: "match_id,puuid", ignoreDuplicates: true });
   }
 }
@@ -557,6 +678,7 @@ async function readMatchHistoryFromDb(
   queueId: number,
   selectedPuuid: string,
   admin: AdminClient,
+  limit = 20,
 ): Promise<MatchHistoryItem[]> {
   const { data: matchRows } = await admin
     .from("matches")
@@ -564,7 +686,7 @@ async function readMatchHistoryFromDb(
     .eq("riot_account_id", riotAccountId)
     .eq("queue_id", queueId)
     .order("played_at", { ascending: false })
-    .limit(20);
+    .limit(limit);
 
   if (!matchRows?.length) return [];
 
@@ -584,9 +706,6 @@ async function readMatchHistoryFromDb(
 
   return matchRows.map((row): MatchHistoryItem => {
     const allParticipants = participantsByMatch.get(row.match_id) ?? [];
-    const scores = new Map(allParticipants.map((p) => [p.puuid as string, (p.op_score as number) ?? 0]));
-    const sorted = [...allParticipants].sort((a, b) => (b.op_score ?? 0) - (a.op_score ?? 0));
-    const rankMap = new Map(sorted.map((p, i) => [p.puuid as string, i + 1]));
 
     const teams = [100, 200].map((teamId) => {
       const teamPs = allParticipants.filter((p) => p.team_id === teamId);

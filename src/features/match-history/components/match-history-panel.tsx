@@ -6,9 +6,10 @@ import Link from "next/link";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Panel } from "@/components/ui/panel";
-import { getMatchHistory, getMatchParticipantTiers, type ParticipantRankInfo, type QueueFilter } from "@/features/match-history/actions";
+import { getCachedMatchHistory, syncSelectedMatchHistory, type ParticipantRankInfo, type QueueFilter } from "@/features/match-history/actions";
 import type { DashboardSnapshot, GroupMember, LeagueAccount } from "@/features/dashboard/types";
 import type { MatchHistoryItem, MatchHistoryResult } from "@/features/match-history/types";
+import { getCachedPreview, setCachedPreview } from "@/features/match-history/lib/match-history-client-cache";
 import { cn } from "@/lib/utils";
 
 type AccountWithMember = LeagueAccount & {
@@ -50,15 +51,32 @@ export function MatchHistoryPanel({ snapshot }: { snapshot: DashboardSnapshot })
 
   const loadHistory = (accountId: string, q: QueueFilter, force = false) => {
     const key = `${accountId}:${q}`;
-    if (!force && historyCache.has(key)) return;
+    const cached = historyCache.get(key);
+    if (!force && cached && (cached.error !== null || cached.matches.length >= 20)) return;
     startTransition(async () => {
-      const result = await getMatchHistory(accountId, q);
+      const result = await getCachedMatchHistory(accountId, q);
+      setHistoryCache((prev) => new Map(prev).set(key, result));
+    });
+  };
+
+  const refreshHistory = (accountId: string, q: QueueFilter) => {
+    const key = `${accountId}:${q}`;
+    startTransition(async () => {
+      const result = await syncSelectedMatchHistory(accountId, q);
+      if (result.error === null) {
+        setCachedPreview(accountId, q, result.matches.slice(0, 3), result.updatedAt);
+      }
       setHistoryCache((prev) => new Map(prev).set(key, result));
     });
   };
 
   useEffect(() => {
     if (!selectedAccount?.id) return;
+    const preview = getCachedPreview(selectedAccount.id, queue);
+    if (preview) {
+      const key = `${selectedAccount.id}:${queue}`;
+      setHistoryCache((prev) => (prev.has(key) ? prev : new Map(prev).set(key, preview)));
+    }
     loadHistory(selectedAccount.id, queue);
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedAccount?.id, queue]);
@@ -86,10 +104,10 @@ export function MatchHistoryPanel({ snapshot }: { snapshot: DashboardSnapshot })
                 <Button
                   className="self-start"
                   disabled={isPending}
-                  onClick={() => loadHistory(selectedAccount.id, queue, true)}
+                  onClick={() => refreshHistory(selectedAccount.id, queue)}
                   variant="secondary"
                 >
-                  {isPending ? "Consultando..." : "Actualizar historial"}
+                  {isPending ? "Actualizando..." : "Actualizar historial"}
                 </Button>
                 <div className="flex overflow-hidden rounded-lg border border-white/12 bg-black/20">
                   {(["soloq", "flex"] as const).map((q) => (
@@ -131,7 +149,6 @@ export function MatchHistoryPanel({ snapshot }: { snapshot: DashboardSnapshot })
                   accountId={selectedHistory.account.id}
                   matches={selectedHistory.matches}
                   queue={queue}
-                  routingPlatform={selectedHistory.account.routingPlatform ?? ""}
                 />
               ) : selectedHistory ? (
                 <HistoryMessage
@@ -207,12 +224,10 @@ function MatchList({
   accountId,
   matches,
   queue,
-  routingPlatform,
 }: {
   accountId: string;
   matches: MatchHistoryItem[];
   queue: QueueFilter;
-  routingPlatform: string;
 }) {
   const [expandedMatchId, setExpandedMatchId] = useState<string | null>(null);
 
@@ -225,7 +240,6 @@ function MatchList({
           key={match.id}
           match={match}
           queue={queue}
-          routingPlatform={routingPlatform}
           onToggle={() => setExpandedMatchId((current) => (current === match.id ? null : match.id))}
         />
       ))}
@@ -239,14 +253,12 @@ function MatchCard({
   match,
   onToggle,
   queue,
-  routingPlatform,
 }: {
   accountId: string;
   expanded: boolean;
   match: MatchHistoryItem;
   onToggle: () => void;
   queue: QueueFilter;
-  routingPlatform: string;
 }) {
   const won = match.result === "Victoria";
 
@@ -354,7 +366,7 @@ function MatchCard({
         </div>
       </div>
 
-      {expanded ? <ExpandedMatchDetails match={match} routingPlatform={routingPlatform} /> : null}
+      {expanded ? <ExpandedMatchDetails match={match} /> : null}
 
       <div className="flex justify-end border-t border-white/8 px-4 py-3">
         <div className="flex flex-wrap items-center justify-end gap-2">
@@ -382,19 +394,10 @@ function MatchCard({
   );
 }
 
-function ExpandedMatchDetails({ match, routingPlatform }: { match: MatchHistoryItem; routingPlatform: string }) {
+function ExpandedMatchDetails({ match }: { match: MatchHistoryItem }) {
   const allParticipants = match.teams.flatMap((t) => t.participants);
   const sorted = [...allParticipants].sort((a, b) => b.opScore - a.opScore);
   const rankMap = new Map(sorted.map((p, i) => [p.puuid, i + 1]));
-
-  const [tierMap, setTierMap] = useState<Record<string, ParticipantRankInfo>>({});
-
-  useEffect(() => {
-    if (!routingPlatform) return;
-    const puuids = allParticipants.map((p) => p.puuid);
-    getMatchParticipantTiers(puuids, routingPlatform).then(setTierMap);
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [match.matchId, routingPlatform]);
 
   return (
     <div className="border-t border-cyan-200/10 bg-black/18 p-4">
@@ -433,7 +436,7 @@ function ExpandedMatchDetails({ match, routingPlatform }: { match: MatchHistoryI
                   key={participant.puuid || participant.participantId}
                   participant={participant}
                   rank={rankMap.get(participant.puuid) ?? 10}
-                  tier={tierMap[participant.puuid] ?? null}
+                  tier={null}
                 />
               ))}
             </div>

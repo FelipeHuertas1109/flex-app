@@ -15,6 +15,7 @@ import { CopyChip } from "@/features/dashboard/components/copy-chip";
 import { ExternalStatsButton } from "@/features/dashboard/components/external-stats-button";
 import { LiveGameButton } from "@/features/dashboard/components/live-game-button";
 import { RankBadge } from "@/features/dashboard/components/rank-badge";
+import { MatchHistoryPrefetch } from "@/features/match-history/components/match-history-prefetch";
 import { RemoveMemberButton } from "@/features/groups/components/remove-member-button";
 import type {
   DashboardSnapshot,
@@ -594,6 +595,7 @@ export function DashboardView({
       </section>
     </div>
     <DashboardBackgroundSync groupId={snapshot.group.id} />
+    <MatchHistoryPrefetch groupId={snapshot.group.id} />
     </AddAccountProvider>
   );
 }
