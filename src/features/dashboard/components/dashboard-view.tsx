@@ -595,19 +595,23 @@ function LeaderboardRow({
   queue: "flex" | "solo-duo";
 }) {
   const queueStats = queue === "solo-duo" ? account.soloDuo : account.flex;
-  const rowTone = account.isShared
-    ? "outline-amber-400/48 bg-[linear-gradient(90deg,rgba(245,184,63,0.21),rgba(245,184,63,0.09)_34%,rgba(7,19,39,0.87)_72%)] shadow-[inset_4px_0_0_rgba(245,184,63,0.95),0_0_24px_rgba(245,184,63,0.15)] hover:outline-amber-300/68 hover:bg-[linear-gradient(90deg,rgba(245,184,63,0.26),rgba(245,184,63,0.11)_34%,rgba(7,19,39,0.92)_72%)]"
-    : "outline-cyan-300/24 bg-[linear-gradient(90deg,rgba(25,216,255,0.105),rgba(7,19,39,0.82)_31%,rgba(7,19,39,0.9)_74%)] shadow-[inset_4px_0_0_rgba(25,216,255,0.52),0_0_18px_rgba(25,216,255,0.045)] hover:outline-cyan-200/42 hover:bg-[linear-gradient(90deg,rgba(25,216,255,0.14),rgba(7,19,39,0.86)_31%,rgba(7,19,39,0.93)_74%)]";
+  const rank = index + 1;
+  
+  const rowTone = 
+    rank === 1 ? "bg-linear-to-r from-amber-500/10 to-transparent border-amber-500/20" :
+    rank === 2 ? "bg-linear-to-r from-slate-400/10 to-transparent border-slate-400/20" :
+    rank === 3 ? "bg-linear-to-r from-amber-700/10 to-transparent border-amber-700/20" :
+    "bg-transparent border-transparent hover:bg-white/[0.02]";
 
   return (
     <tr
       className={cn(
-        "group overflow-hidden rounded-lg outline outline-1 outline-offset-[-1px] transition duration-150",
+        "group border-b border-[#1f2230] transition duration-150 last:border-0",
         rowTone,
       )}
     >
-      <td className="rounded-l-lg px-4 py-5">
-        <RankNumber rank={index + 1} shared={account.isShared} />
+      <td className="px-4 py-4">
+        <RankNumber rank={rank} />
       </td>
       <td className="px-4 py-5">
         <OwnerIdentity member={account.member} shared={account.isShared} />
@@ -699,18 +703,24 @@ function LeaderboardCard({
   );
 }
 
-function RankNumber({ rank, shared }: { rank: number; shared: boolean }) {
+function RankNumber({ rank }: { rank: number }) {
+  const toneClass =
+    rank === 1
+      ? "bg-linear-to-br from-amber-300 to-amber-500 text-amber-900 border-amber-200/50"
+      : rank === 2
+        ? "bg-linear-to-br from-slate-200 to-slate-400 text-slate-800 border-white/50"
+        : rank === 3
+          ? "bg-linear-to-br from-amber-600 to-amber-800 text-amber-100 border-amber-500/50"
+          : "bg-[#11131a] text-slate-400 border-[#1f2230]";
+
   return (
     <div
       className={cn(
-        "hex-mark relative mx-auto flex size-12 items-center justify-center border text-sm font-black tabular-nums shadow-lg",
-        shared
-          ? "border-amber-200/48 bg-linear-to-br from-amber-300/18 to-black/24 text-amber-100 shadow-amber-500/22"
-          : "border-cyan-200/22 bg-linear-to-br from-cyan-400/12 to-black/26 text-slate-100 shadow-cyan-500/12",
+        "hex-mark mx-auto flex size-10 items-center justify-center border text-sm font-black tabular-nums shadow-xs",
+        toneClass,
       )}
     >
-      <span className="absolute inset-1 hex-mark border border-white/10 bg-black/18" />
-      <span className="relative">{rank}</span>
+      {rank}
     </div>
   );
 }

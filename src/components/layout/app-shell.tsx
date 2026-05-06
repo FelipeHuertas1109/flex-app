@@ -47,7 +47,14 @@ export function AppShell({ children }: AppShellProps) {
           </div>
         </div>
       </header>
-      <main className="mx-auto w-full max-w-[1720px] px-4 py-5 sm:px-6 lg:px-8">{children}</main>
+      <main className="mx-auto w-full max-w-[1720px] px-4 py-5 sm:px-6 lg:px-8">
+        <div className="flex flex-col gap-6 lg:flex-row">
+          <div className="flex-1 lg:w-3/4">{children}</div>
+          <aside className="shrink-0 lg:w-1/4 lg:sticky lg:top-24">
+            {/* Sidebar content could go here or be passed as a prop */}
+          </aside>
+        </div>
+      </main>
     </div>
   );
 }
