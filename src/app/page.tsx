@@ -15,16 +15,17 @@ function parseLeaderboardSortDirection(value: string | undefined): LeaderboardSo
 export default async function Home({
   searchParams,
 }: {
-  searchParams?: Promise<{ dir?: string; queue?: string; sort?: string }>;
+  searchParams?: Promise<{ dir?: string; main?: string; queue?: string; sort?: string }>;
 }) {
   const params = await searchParams;
   const queue = params?.queue === "solo-duo" ? "solo-duo" : "flex";
   const sort = parseLeaderboardSort(params?.sort);
   const sortDirection = parseLeaderboardSortDirection(params?.dir);
+  const mainOnly = params?.main === "1";
 
   return (
     <Suspense fallback={<DashboardSkeleton />}>
-      <DashboardScreen queue={queue} sort={sort} sortDirection={sortDirection} />
+      <DashboardScreen mainOnly={mainOnly} queue={queue} sort={sort} sortDirection={sortDirection} />
     </Suspense>
   );
 }

@@ -29,6 +29,7 @@ import { RenameGroupButton } from "@/features/groups/components/rename-group-dia
 import { cn } from "@/lib/utils";
 
 type DashboardViewProps = {
+  mainOnly: boolean;
   snapshot: DashboardSnapshot;
   queue: "flex" | "solo-duo";
   sort: LeaderboardSort;
@@ -36,6 +37,7 @@ type DashboardViewProps = {
 };
 
 type LeaderboardState = {
+  mainOnly: boolean;
   queue: DashboardViewProps["queue"];
   sort: LeaderboardSort;
   sortDirection: LeaderboardSortDirection;
@@ -178,11 +180,13 @@ function sortLeaderboardAccounts(
 }
 
 function leaderboardHref(
+  mainOnly: boolean,
   queue: "flex" | "solo-duo",
   sort: LeaderboardSort,
   sortDirection: LeaderboardSortDirection,
 ) {
-  return `/?queue=${queue}&sort=${sort}&dir=${sortDirection}`;
+  const mainParam = mainOnly ? "&main=1" : "";
+  return `/?queue=${queue}&sort=${sort}&dir=${sortDirection}${mainParam}`;
 }
 
 function nextSortDirection(
@@ -273,7 +277,7 @@ function LeaderboardNavLink({
   return (
     <Link
       className={className}
-      href={leaderboardHref(nextState.queue, nextState.sort, nextState.sortDirection)}
+      href={leaderboardHref(nextState.mainOnly, nextState.queue, nextState.sort, nextState.sortDirection)}
       onClick={(event) => {
         event.preventDefault();
         onNavigate(nextState);
@@ -287,17 +291,20 @@ function LeaderboardNavLink({
 }
 
 export function DashboardView({
+  mainOnly: initialMainOnly,
   snapshot,
   queue: initialQueue,
   sort: initialSort,
   sortDirection: initialSortDirection,
 }: DashboardViewProps) {
   const [leaderboardState, setLeaderboardState] = useState<LeaderboardState>(() => ({
+    mainOnly: initialMainOnly,
     queue: initialQueue,
     sort: initialSort,
     sortDirection: initialSortDirection,
   }));
 
+  const mainOnly = leaderboardState.mainOnly;
   const queue = leaderboardState.queue;
   const sort = leaderboardState.sort;
   const sortDirection = leaderboardState.sortDirection;
@@ -305,6 +312,7 @@ export function DashboardView({
   const navigateLeaderboard = (nextState: LeaderboardState) => {
     setLeaderboardState((current) => {
       if (
+        current.mainOnly === nextState.mainOnly &&
         current.queue === nextState.queue &&
         current.sort === nextState.sort &&
         current.sortDirection === nextState.sortDirection
@@ -313,7 +321,11 @@ export function DashboardView({
       }
 
       if (typeof window !== "undefined") {
-        window.history.replaceState(window.history.state, "", leaderboardHref(nextState.queue, nextState.sort, nextState.sortDirection));
+        window.history.replaceState(
+          window.history.state,
+          "",
+          leaderboardHref(nextState.mainOnly, nextState.queue, nextState.sort, nextState.sortDirection),
+        );
       }
 
       return nextState;
@@ -327,7 +339,8 @@ export function DashboardView({
     ...account,
     member: null,
   }));
-  const accounts = [...memberAccounts, ...sharedAccounts];
+  const allAccounts = [...memberAccounts, ...sharedAccounts];
+  const accounts = mainOnly ? allAccounts.filter((account) => account.isMain) : allAccounts;
   const lastStatsSyncedAt = latestIsoDate(accounts.map((account) => account.lastStatsSyncedAt));
   const lastLiveGameCheckedAt = latestIsoDate(accounts.map((account) => account.lastLiveGameCheckedAt));
   const sortedAccounts = sortLeaderboardAccounts(accounts, queue, sort, sortDirection);
@@ -346,7 +359,7 @@ export function DashboardView({
     id: member.id,
     name: member.name,
   }));
-  const leaderboardAnimationKey = `${queue}:${sort}:${sortDirection}:${sortedAccounts.map((account) => account.id).join("|")}`;
+  const leaderboardAnimationKey = `${mainOnly}:${queue}:${sort}:${sortDirection}:${sortedAccounts.map((account) => account.id).join("|")}`;
   const registerDesktopRow = useReorderAnimation(`desktop:${leaderboardAnimationKey}`);
   const registerMobileCard = useReorderAnimation(`mobile:${leaderboardAnimationKey}`);
 
@@ -367,6 +380,7 @@ export function DashboardView({
               <div className="flex flex-wrap items-center gap-2">
                 <Badge tone="teal">Grupo privado</Badge>
                 <Badge tone="gold">{queue === "solo-duo" ? "Solo/Duo queue" : "Flex queue"}</Badge>
+                {mainOnly ? <Badge tone="indigo">Solo mains</Badge> : null}
               </div>
               <div className="mt-4 flex flex-wrap items-end gap-3">
                 <h1 className="max-w-[min(100%,36rem)] text-4xl font-black tracking-tight text-white sm:text-5xl">
@@ -447,7 +461,7 @@ export function DashboardView({
               <div className="flex flex-wrap items-center justify-end gap-2">
                 <div className="flex rounded-lg border border-white/10 bg-black/24 p-1 shadow-inner shadow-black/20">
                   <LeaderboardNavLink
-                    nextState={{ queue: "flex", sort, sortDirection }}
+                    nextState={{ mainOnly, queue: "flex", sort, sortDirection }}
                     onNavigate={navigateLeaderboard}
                   >
                     <span className={cn(
@@ -460,7 +474,7 @@ export function DashboardView({
                     </span>
                   </LeaderboardNavLink>
                   <LeaderboardNavLink
-                    nextState={{ queue: "solo-duo", sort, sortDirection }}
+                    nextState={{ mainOnly, queue: "solo-duo", sort, sortDirection }}
                     onNavigate={navigateLeaderboard}
                   >
                     <span className={cn(
@@ -473,21 +487,36 @@ export function DashboardView({
                     </span>
                   </LeaderboardNavLink>
                 </div>
+                <LeaderboardNavLink
+                  nextState={{ mainOnly: !mainOnly, queue, sort, sortDirection }}
+                  onNavigate={navigateLeaderboard}
+                >
+                  <span
+                    className={cn(
+                      "inline-flex h-8 items-center rounded-md border px-3 text-xs font-black transition",
+                      mainOnly
+                        ? "border-cyan-300/55 bg-cyan-400/14 text-cyan-100 shadow-[0_0_0_1px_rgba(34,211,238,0.28)]"
+                        : "border-white/12 bg-black/24 text-slate-300 hover:border-cyan-300/40 hover:bg-white/8 hover:text-slate-100",
+                    )}
+                  >
+                    Solo mains
+                  </span>
+                </LeaderboardNavLink>
                 <div className="flex flex-wrap items-center justify-end gap-2 md:hidden">
                   <LeaderboardNavLink
-                    nextState={{ queue, sort: "rank", sortDirection: nextSortDirection(sort, sortDirection, "rank") }}
+                    nextState={{ mainOnly, queue, sort: "rank", sortDirection: nextSortDirection(sort, sortDirection, "rank") }}
                     onNavigate={navigateLeaderboard}
                   >
                     <Badge tone={sort === "rank" ? "teal" : "neutral"}>Rango {sort === "rank" ? (sortDirection === "asc" ? "↑" : "↓") : ""}</Badge>
                   </LeaderboardNavLink>
                   <LeaderboardNavLink
-                    nextState={{ queue, sort: "games", sortDirection: nextSortDirection(sort, sortDirection, "games") }}
+                    nextState={{ mainOnly, queue, sort: "games", sortDirection: nextSortDirection(sort, sortDirection, "games") }}
                     onNavigate={navigateLeaderboard}
                   >
                     <Badge tone={sort === "games" ? "teal" : "neutral"}>Partidas {sort === "games" ? (sortDirection === "asc" ? "↑" : "↓") : ""}</Badge>
                   </LeaderboardNavLink>
                   <LeaderboardNavLink
-                    nextState={{ queue, sort: "win-rate", sortDirection: nextSortDirection(sort, sortDirection, "win-rate") }}
+                    nextState={{ mainOnly, queue, sort: "win-rate", sortDirection: nextSortDirection(sort, sortDirection, "win-rate") }}
                     onNavigate={navigateLeaderboard}
                   >
                     <Badge tone={sort === "win-rate" ? "teal" : "neutral"}>Win rate {sort === "win-rate" ? (sortDirection === "asc" ? "↑" : "↓") : ""}</Badge>
@@ -511,13 +540,13 @@ export function DashboardView({
                       <th className="w-[4.75rem] px-4 py-3 text-center font-black">#</th>
                       <th className="w-[5.25rem] px-2 py-3 text-center font-black">Propietario</th>
                       <th className="px-4 py-3 font-black">Riot ID</th>
-                      <SortableHeader activeSort={sort} className="px-4 py-3" onNavigate={navigateLeaderboard} queue={queue} sort="rank" sortDirection={sortDirection}>
+                      <SortableHeader activeSort={sort} className="px-4 py-3" mainOnly={mainOnly} onNavigate={navigateLeaderboard} queue={queue} sort="rank" sortDirection={sortDirection}>
                         Rango
                       </SortableHeader>
-                      <SortableHeader activeSort={sort} className="px-4 py-3 text-center" onNavigate={navigateLeaderboard} queue={queue} sort="games" sortDirection={sortDirection}>
+                      <SortableHeader activeSort={sort} className="px-4 py-3 text-center" mainOnly={mainOnly} onNavigate={navigateLeaderboard} queue={queue} sort="games" sortDirection={sortDirection}>
                         Partidas
                       </SortableHeader>
-                      <SortableHeader activeSort={sort} className="px-4 py-3 text-center" onNavigate={navigateLeaderboard} queue={queue} sort="win-rate" sortDirection={sortDirection}>
+                      <SortableHeader activeSort={sort} className="px-4 py-3 text-center" mainOnly={mainOnly} onNavigate={navigateLeaderboard} queue={queue} sort="win-rate" sortDirection={sortDirection}>
                         Win rate
                       </SortableHeader>
                       <th className="whitespace-nowrap px-4 py-3 text-end font-black">Acciones</th>
@@ -575,6 +604,7 @@ function SortableHeader({
   activeSort,
   children,
   className,
+  mainOnly,
   onNavigate,
   queue,
   sort,
@@ -583,6 +613,7 @@ function SortableHeader({
   activeSort: LeaderboardSort;
   children: ReactNode;
   className?: string;
+  mainOnly: boolean;
   onNavigate: (nextState: LeaderboardState) => void;
   queue: "flex" | "solo-duo";
   sort: LeaderboardSort;
@@ -591,6 +622,7 @@ function SortableHeader({
   const active = activeSort === sort;
   const nextDirection = nextSortDirection(activeSort, sortDirection, sort);
   const nextState: LeaderboardState = {
+    mainOnly,
     queue,
     sort,
     sortDirection: nextDirection,
@@ -840,6 +872,13 @@ function LeaderboardRow({
       </td>
       <td className="rounded-r-lg px-4 py-5 align-middle">
         <div className="flex justify-end gap-2">
+          <Link
+            className="inline-flex h-9 items-center justify-center rounded-lg border border-violet-300/40 bg-violet-500/10 px-3 text-xs font-black text-violet-100 shadow-lg shadow-violet-500/12 transition hover:border-violet-200/70 hover:bg-violet-500/16"
+            href={`/perfil/cuenta/${account.id}`}
+            title="Abrir estadísticas del jugador"
+          >
+            Rendimiento
+          </Link>
           <LiveGameButton gameName={account.summonerName} inGame={account.isInGame} region={account.region} tagLine={account.tagLine} />
           <ExternalStatsButton gameName={account.summonerName} region={account.region} tagLine={account.tagLine} />
           <AccountDetailsButton
@@ -900,6 +939,13 @@ function LeaderboardCard({
         <MetricPill label="Win rate" value={`${queueStats.winRate}%`} />
       </div>
       <div className="mt-4 flex justify-end gap-2 border-t border-cyan-200/12 pt-3">
+        <Link
+          className="inline-flex h-9 items-center justify-center rounded-lg border border-violet-300/40 bg-violet-500/10 px-3 text-xs font-black text-violet-100 shadow-lg shadow-violet-500/12 transition hover:border-violet-200/70 hover:bg-violet-500/16"
+          href={`/perfil/cuenta/${account.id}`}
+          title="Abrir estadísticas del jugador"
+        >
+          Rendimiento
+        </Link>
         <LiveGameButton gameName={account.summonerName} inGame={account.isInGame} region={account.region} tagLine={account.tagLine} />
         <ExternalStatsButton gameName={account.summonerName} region={account.region} tagLine={account.tagLine} />
         <AccountDetailsButton

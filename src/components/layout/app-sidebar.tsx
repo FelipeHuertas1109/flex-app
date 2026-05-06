@@ -107,6 +107,7 @@ function SidebarGlyph({ active, type }: { active: boolean; type: NavIconName }) 
 export function AppSidebar({ user }: { user: ShellUser | null }) {
   const pathname = usePathname() ?? "/";
   const initial = (user?.displayName ?? "?").slice(0, 1).toUpperCase();
+  const profileActive = pathname === "/perfil" || pathname.startsWith("/perfil/");
 
   return (
     <aside
@@ -130,7 +131,14 @@ export function AppSidebar({ user }: { user: ShellUser | null }) {
         </span>
       </Link>
 
-      <div className="relative flex shrink-0 items-center justify-center gap-0 border-b border-cyan-200/10 px-2 py-3 group-hover/sidebar:justify-start group-hover/sidebar:gap-2 group-hover/sidebar:px-3">
+      <Link
+        className={cn(
+          "relative flex shrink-0 items-center justify-center gap-0 border-b border-cyan-200/10 px-2 py-3 transition-colors",
+          "group-hover/sidebar:justify-start group-hover/sidebar:gap-2 group-hover/sidebar:px-3",
+          profileActive ? "bg-cyan-300/10" : "hover:bg-white/6",
+        )}
+        href="/perfil"
+      >
         <div className="relative size-9 shrink-0 overflow-hidden rounded-full ring-2 ring-cyan-400/28">
           {user?.avatarUrl ? (
             <Image alt="" className="size-full object-cover" height={36} src={user.avatarUrl} width={36} />
@@ -144,7 +152,7 @@ export function AppSidebar({ user }: { user: ShellUser | null }) {
           <p className="truncate text-sm font-bold text-white">{user?.displayName ?? "Sesión"}</p>
           <p className="truncate text-xs text-slate-400">{user?.email ?? ""}</p>
         </div>
-      </div>
+      </Link>
 
       <nav aria-label="Secciones" className="flex min-h-0 flex-1 flex-col gap-1 overflow-y-auto px-2 py-3">
         {navItems.map((item) => {

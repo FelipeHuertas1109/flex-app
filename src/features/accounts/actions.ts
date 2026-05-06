@@ -516,5 +516,31 @@ export async function deleteAccount(groupAccountId: string) {
   }
 
   revalidatePath("/");
+  revalidatePath("/perfil");
+  return { success: true };
+}
+
+export async function setAccountMainStatus(groupAccountId: string, isMain: boolean) {
+  const authCheck = await getAuthorizedGroupAccount(groupAccountId);
+  if ("error" in authCheck) return { error: authCheck.error };
+
+  let adminSupabase;
+  try {
+    adminSupabase = createAdminClient();
+  } catch {
+    return { error: "Falta SUPABASE_SERVICE_ROLE_KEY en el servidor." };
+  }
+
+  const { error } = await adminSupabase
+    .from("group_accounts")
+    .update({ custom_name: isMain ? "main" : null })
+    .eq("id", groupAccountId);
+
+  if (error) {
+    return { error: "No se pudo actualizar el estado principal de la cuenta" };
+  }
+
+  revalidatePath("/");
+  revalidatePath("/perfil");
   return { success: true };
 }
