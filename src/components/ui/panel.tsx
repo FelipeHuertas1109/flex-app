@@ -10,7 +10,7 @@ export function Panel({ children, className }: PanelProps) {
   return (
     <section
       className={cn(
-        "neon-panel rounded-xl border border-cyan-200/12 bg-surface/78 shadow-2xl shadow-black/35 ring-1 ring-white/6 backdrop-blur-xl",
+        "rounded-2xl border border-[#1f2230] bg-[#11131a] p-5 sm:p-6 shadow-sm transition-all hover:-translate-y-0.5 hover:shadow-md hover:shadow-black/20",
         className,
       )}
     >

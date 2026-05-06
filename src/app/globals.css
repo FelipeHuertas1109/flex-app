@@ -1,19 +1,19 @@
 @import "tailwindcss";
 
 :root {
-  --background: #030712;
+  --background: #0b0d12;
   --foreground: #f7fbff;
-  --surface: #07111f;
-  --surface-muted: #0d1b2f;
-  --border: #1b3352;
-  --muted: #9aa9c2;
+  --surface: #11131a;
+  --surface-muted: #11131a;
+  --border: #1f2230;
+  --muted: #9aa0b5;
   --ink-soft: #d7e5ff;
 
-  --teal: #19d8ff;
-  --teal-soft: #07374a;
+  --teal: #5b8cff;
+  --teal-soft: #071633;
 
-  --indigo: #7c3cff;
-  --indigo-soft: #20124a;
+  --indigo: #7c5cff;
+  --indigo-soft: #1c1433;
 
   --gold: #f5b83f;
   --gold-soft: #3b290a;
@@ -22,7 +22,7 @@
   --danger: #ff4f93;
   --danger-soft: #401227;
 
-  --ring: #22d3ee;
+  --ring: #5b8cff;
 }
 
 @theme inline {
@@ -69,20 +69,21 @@ body {
     top center,
     top center,
     top center,
-    top center,
+    center,
     center;
   background-repeat:
-    repeat-y,
     no-repeat,
     no-repeat,
-    repeat-y,
+    no-repeat,
+    no-repeat,
     repeat;
   background-size:
-    100% 941px,
-    100% 941px,
-    100% 941px,
-    max(100vw, 1672px) auto,
-    auto;
+    100% 100%,
+    100% 100%,
+    100% 100%,
+    cover,
+    cover;
+  background-attachment: fixed;
   color: var(--foreground);
 }
 
@@ -105,6 +106,21 @@ a {
     opacity: 1;
     transform: translateY(0);
   }
+}
+
+@keyframes slide-right {
+  from {
+    transform: translateX(-100%);
+    opacity: 0;
+  }
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+
+.animate-slide-right {
+  animation: slide-right 500ms cubic-bezier(0.16, 1, 0.3, 1) forwards;
 }
 
 @keyframes shimmer {

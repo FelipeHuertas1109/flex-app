@@ -9,7 +9,7 @@ type AppShellProps = {
 export function AppShell({ children }: AppShellProps) {
   return (
     <div className="min-h-screen overflow-x-hidden">
-      <div className="pointer-events-none fixed inset-0 -z-10 surface-pattern" />
+      <div className="pointer-events-none fixed inset-0 -z-10 surface-pattern backdrop-blur-[3px]" />
       <div className="pointer-events-none fixed inset-x-0 top-0 -z-10 h-72 bg-[radial-gradient(ellipse_at_top,rgba(25,216,255,0.14),transparent_62%)]" />
 
       <header className="sticky top-0 z-20 border-b border-cyan-200/12 bg-[#030816]/82 shadow-2xl shadow-black/35 backdrop-blur-2xl">
@@ -28,7 +28,7 @@ export function AppShell({ children }: AppShellProps) {
             </Link>
             <div className="min-w-0">
               <p className="truncate text-lg font-black tracking-tight text-white">Flex App</p>
-              <p className="truncate text-xs font-medium text-slate-300">Equipos, cuentas y rendimiento</p>
+              <p className="truncate text-xs font-medium text-slate-300">Domina el meta con tu escuadra</p>
             </div>
           </div>
 
@@ -47,7 +47,14 @@ export function AppShell({ children }: AppShellProps) {
           </div>
         </div>
       </header>
-      <main className="mx-auto w-full max-w-[1720px] px-4 py-5 sm:px-6 lg:px-8">{children}</main>
+      <main className="mx-auto w-full max-w-[1720px] px-4 py-5 sm:px-6 lg:px-8">
+        <div className="flex flex-col gap-6 lg:flex-row">
+          <div className="flex-1 lg:w-3/4">{children}</div>
+          <aside className="shrink-0 lg:w-1/4 lg:sticky lg:top-24">
+            {/* Sidebar content could go here or be passed as a prop */}
+          </aside>
+        </div>
+      </main>
     </div>
   );
 }
