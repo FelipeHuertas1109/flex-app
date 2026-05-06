@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
-import { getChampionsByKeyMap } from "@/lib/lol/ddragon";
+import { getChampionsByKeyMap, getRunesMap, getSummonerSpellsMap } from "@/lib/lol/ddragon";
 import { getStoredRiotApiKeyRecord } from "@/lib/riot/api-key";
 import {
   fetchLiveGameDetailsByPuuid,
@@ -155,7 +155,11 @@ export async function getLiveGameDetails(groupAccountId: string) {
       return { inGame: false as const };
     }
 
-    const champions = await getChampionsByKeyMap();
+    const [champions, runes, summonerSpells] = await Promise.all([
+      getChampionsByKeyMap(),
+      getRunesMap(),
+      getSummonerSpellsMap(),
+    ]);
     const participants = liveGame.participants.map((participant) => {
       const champion = champions.get(participant.championId);
       return {
@@ -164,11 +168,25 @@ export async function getLiveGameDetails(groupAccountId: string) {
         championImageUrl: champion?.imageUrl ?? null,
         championName: champion?.name ?? `Champion ${participant.championId}`,
         isSelectedAccount: participant.puuid === puuid,
-        perks: participant.perks?.perkIds?.slice(0, 2) ?? [],
+        perks: (participant.perks?.perkIds?.slice(0, 2) ?? []).map((perkId) => {
+          const rune = runes.get(perkId);
+          return {
+            id: perkId,
+            imageUrl: rune?.imageUrl ?? null,
+            name: rune?.name ?? `Runa ${perkId}`,
+          };
+        }),
         profileIconId: participant.profileIconId,
         puuid: participant.puuid,
         riotId: participant.riotId ?? "Invocador oculto",
-        spells: [participant.spell1Id, participant.spell2Id],
+        spells: [participant.spell1Id, participant.spell2Id].map((spellId) => {
+          const spell = summonerSpells.get(spellId);
+          return {
+            id: spellId,
+            imageUrl: spell?.imageUrl ?? null,
+            name: spell?.name ?? `Spell ${spellId}`,
+          };
+        }),
         teamId: participant.teamId,
         teamLabel: TEAM_LABELS[participant.teamId] ?? `Equipo ${participant.teamId}`,
       };

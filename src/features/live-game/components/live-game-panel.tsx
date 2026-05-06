@@ -268,9 +268,9 @@ function LiveGameDetails({ game }: { game: LiveGameInfo }) {
                     </div>
                     <p className="mt-1 truncate text-xs font-medium text-slate-400">{participant.championName}</p>
                   </div>
-                  <div className="hidden shrink-0 text-right text-[11px] font-bold text-slate-500 sm:block">
-                    <div>Spells {participant.spells.join(" / ")}</div>
-                    {participant.perks.length > 0 ? <div>Runas {participant.perks.join(" / ")}</div> : null}
+                  <div className="hidden shrink-0 items-center gap-2 sm:flex">
+                    <IconGroup icons={participant.spells} label="Hechizos" />
+                    {participant.perks.length > 0 ? <IconGroup icons={participant.perks} label="Runas" /> : null}
                   </div>
                 </div>
               ))}
@@ -278,6 +278,34 @@ function LiveGameDetails({ game }: { game: LiveGameInfo }) {
           </div>
         ))}
       </div>
+    </div>
+  );
+}
+
+function IconGroup({
+  icons,
+  label,
+}: {
+  icons: { imageUrl: string | null; name: string }[];
+  label: string;
+}) {
+  return (
+    <div className="flex items-center gap-1" aria-label={label}>
+      {icons.map((icon, index) => (
+        <DataDragonIcon icon={icon} key={`${label}-${index}-${icon.name}`} />
+      ))}
+    </div>
+  );
+}
+
+function DataDragonIcon({ icon }: { icon: { imageUrl: string | null; name: string } }) {
+  return (
+    <div className="relative size-7 overflow-hidden rounded-md border border-white/10 bg-black/30" title={icon.name}>
+      {icon.imageUrl ? (
+        <Image alt={icon.name} className="object-cover" fill sizes="28px" src={icon.imageUrl} />
+      ) : (
+        <div className="flex size-full items-center justify-center text-[9px] font-black text-slate-500">?</div>
+      )}
     </div>
   );
 }

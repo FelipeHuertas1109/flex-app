@@ -64,6 +64,98 @@ export type RiotCurrentGameInfo = {
   platformId: string;
 };
 
+export type RiotMatchDto = {
+  metadata: {
+    dataVersion: string;
+    matchId: string;
+    participants: string[];
+  };
+  info: {
+    gameCreation: number;
+    gameDuration: number;
+    gameEndTimestamp?: number;
+    gameId: number;
+    gameMode: string;
+    gameName: string;
+    gameStartTimestamp?: number;
+    gameType: string;
+    gameVersion: string;
+    mapId: number;
+    participants: RiotMatchParticipantDto[];
+    platformId: string;
+    queueId: number;
+    teams: {
+      objectives?: Record<string, { first: boolean; kills: number }>;
+      teamId: number;
+      win: boolean;
+    }[];
+  };
+};
+
+export type RiotMatchParticipantDto = {
+  assists: number;
+  baronKills: number;
+  bountyLevel: number;
+  champExperience: number;
+  champLevel: number;
+  championId: number;
+  championName: string;
+  damageDealtToBuildings: number;
+  damageDealtToObjectives: number;
+  damageDealtToTurrets: number;
+  damageSelfMitigated: number;
+  deaths: number;
+  detectorWardsPlaced: number;
+  doubleKills: number;
+  dragonKills: number;
+  goldEarned: number;
+  goldSpent: number;
+  individualPosition: string;
+  item0: number;
+  item1: number;
+  item2: number;
+  item3: number;
+  item4: number;
+  item5: number;
+  item6: number;
+  kills: number;
+  lane: string;
+  magicDamageDealtToChampions: number;
+  neutralMinionsKilled: number;
+  objectivesStolen: number;
+  participantId: number;
+  pentaKills: number;
+  physicalDamageDealtToChampions: number;
+  profileIcon: number;
+  puuid: string;
+  quadraKills: number;
+  riotIdGameName?: string;
+  riotIdTagline?: string;
+  summoner1Id: number;
+  summoner2Id: number;
+  teamId: number;
+  teamPosition: string;
+  timeCCingOthers: number;
+  totalAllyJungleMinionsKilled: number;
+  totalDamageDealtToChampions: number;
+  totalDamageShieldedOnTeammates: number;
+  totalDamageTaken: number;
+  totalEnemyJungleMinionsKilled: number;
+  totalHeal: number;
+  totalHealsOnTeammates: number;
+  totalMinionsKilled: number;
+  totalTimeCCDealt: number;
+  totalTimeSpentDead: number;
+  tripleKills: number;
+  trueDamageDealtToChampions: number;
+  turretKills: number;
+  visionScore: number;
+  visionWardsBoughtInGame: number;
+  wardsKilled: number;
+  wardsPlaced: number;
+  win: boolean;
+};
+
 const EMPTY_QUEUE_STATS: QueueStats = {
   tier: "UNRANKED",
   rank: null,
@@ -102,7 +194,7 @@ function isRetriableStatus(status: number) {
   return status === 408 || status === 429 || status >= 500;
 }
 
-async function fetchRiotJson<T>(
+export async function fetchRiotJson<T>(
   url: string,
   options: {
     headers: { "X-Riot-Token": string };
@@ -300,4 +392,51 @@ export async function fetchLeagueStatsByPuuid(
     }
     throw error;
   }
+}
+
+function regionalRoutingFromPlatform(platform: string): string {
+  const normalized = platform.trim().toLowerCase();
+  if (normalized === "euw1" || normalized === "eun1" || normalized === "tr1" || normalized === "ru") {
+    return "europe";
+  }
+  if (normalized === "kr" || normalized === "jp1") {
+    return "asia";
+  }
+  if (normalized === "oc1") {
+    return "sea";
+  }
+  return "americas";
+}
+
+export async function fetchMatchIdsByPuuid(
+  puuid: string,
+  platform: string,
+  apiKey: string,
+  count = 20,
+): Promise<string[]> {
+  const headers = { "X-Riot-Token": apiKey };
+  const regionalRouting = regionalRoutingFromPlatform(platform);
+  const matchIdsUrl = `https://${regionalRouting}.api.riotgames.com/lol/match/v5/matches/by-puuid/${encodeURIComponent(puuid)}/ids?start=0&count=${count}`;
+
+  return fetchRiotJson<string[]>(matchIdsUrl, {
+    headers,
+    notFoundMessage: "No se encontro historial para esta cuenta.",
+    requestLabel: `Match-V5 IDs en ${regionalRouting}`,
+  });
+}
+
+export async function fetchMatchById(
+  matchId: string,
+  platform: string,
+  apiKey: string,
+): Promise<RiotMatchDto> {
+  const headers = { "X-Riot-Token": apiKey };
+  const regionalRouting = regionalRoutingFromPlatform(platform);
+  const matchUrl = `https://${regionalRouting}.api.riotgames.com/lol/match/v5/matches/${encodeURIComponent(matchId)}`;
+
+  return fetchRiotJson<RiotMatchDto>(matchUrl, {
+    headers,
+    notFoundMessage: `Partida ${matchId} no encontrada.`,
+    requestLabel: `Match-V5 detalle ${matchId}`,
+  });
 }
