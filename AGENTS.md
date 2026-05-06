@@ -79,6 +79,7 @@
 
 - Scraping de League of Graphs debe aislarse detras de servicios/adaptadores y no contaminar componentes React.
 - La sincronizacion con Riot se dispara desde la app: boton «Sincronizar todo» y un intervalo en el dashboard (`DashboardBackgroundSync`, cada 5 minutos por defecto, sobreescribible con `NEXT_PUBLIC_DASHBOARD_RIOT_SYNC_MINUTES`) solo mientras la pestana esta abierta; sin cron en repo.
+- La `RIOT_API_KEY` operativa se rota desde la vista `/key`, se guarda en `public.riot_api_keys` y se lee solo desde codigo servidor con `SUPABASE_SERVICE_ROLE_KEY`; no depender de una env statica para los syncs normales.
 - La metrica "Posicion Promedio" debe tener tipos explicitos y documentacion de formula antes de exponerla como dato real.
 
 ## Reglas para agentes de codigo

@@ -2,6 +2,7 @@
 
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { getStoredRiotApiKeyRecord } from "@/lib/riot/api-key";
 import { fetchRiotAccountStats } from "@/lib/riot/client";
 import { cleanRiotIdPart } from "@/lib/riot/format";
 import { revalidatePath } from "next/cache";
@@ -34,6 +35,7 @@ async function syncRiotAccountById(
   riotAccountId: string,
   gameName: string,
   tagLine: string,
+  apiKey: string,
   routingPlatform?: string | null,
 ) {
   const savedRoutingPlatform = normalizeSavedRoutingPlatform(routingPlatform);
@@ -41,7 +43,7 @@ async function syncRiotAccountById(
     return { ok: false as const, error: "Cuenta sin region definida." };
   }
 
-  const stats = await fetchRiotAccountStats(gameName, tagLine, savedRoutingPlatform);
+  const stats = await fetchRiotAccountStats(gameName, tagLine, savedRoutingPlatform, apiKey);
   if (!stats) {
     return { ok: false as const, error: "No se pudo consultar Riot API." };
   }
@@ -184,7 +186,11 @@ export async function addAccount(groupId: string, formData: FormData) {
     riotAccountId = newRiotAccount.id;
   }
 
-  const syncResult = await syncRiotAccountById(riotAccountId, gameName, tagLine, routingPlatform);
+  const riotApiKey = await getStoredRiotApiKeyRecord();
+  const syncResult =
+    riotApiKey.apiKey && !riotApiKey.error
+      ? await syncRiotAccountById(riotAccountId, gameName, tagLine, riotApiKey.apiKey, routingPlatform)
+      : { ok: false as const, error: riotApiKey.error ?? "No hay una Riot API Key activa. Actualizala en Key." };
 
   // 2. Relacionar la cuenta con el grupo (service role: mismas reglas que update/delete;
   // el INSERT con anon a veces falla por RLS o por columnas nuevas en entornos desalineados)
@@ -248,6 +254,15 @@ export async function syncAllAccounts(groupId: string) {
     return { error: "No perteneces a este grupo" };
   }
 
+  const riotApiKey = await getStoredRiotApiKeyRecord();
+  if (riotApiKey.error) {
+    return { error: riotApiKey.error };
+  }
+  if (!riotApiKey.apiKey) {
+    return { error: "No hay una Riot API Key activa. Actualizala en Key antes de sincronizar." };
+  }
+  const activeRiotApiKey = riotApiKey.apiKey;
+
   const { data: accounts, error } = await supabase
     .from("group_accounts")
     .select("riot_account_id, riot_accounts(game_name, tag_line, routing_platform)")
@@ -272,6 +287,7 @@ export async function syncAllAccounts(groupId: string) {
         account.riot_account_id,
         riotAccount.game_name,
         riotAccount.tag_line,
+        activeRiotApiKey,
         riotAccount.routing_platform,
       );
 

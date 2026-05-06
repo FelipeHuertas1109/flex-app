@@ -161,6 +161,84 @@ a {
   clip-path: polygon(25% 7%, 75% 7%, 100% 50%, 75% 93%, 25% 93%, 0 50%);
 }
 
+.swal-neon-popup {
+  border: 1px solid rgba(25, 216, 255, 0.2);
+  border-radius: 1rem;
+  box-shadow:
+    0 30px 80px rgba(0, 0, 0, 0.52),
+    0 0 0 1px rgba(255, 255, 255, 0.05),
+    0 0 28px rgba(25, 216, 255, 0.08);
+  backdrop-filter: blur(20px);
+}
+
+.swal-neon-title {
+  color: var(--foreground);
+  font-weight: 900;
+  letter-spacing: -0.02em;
+}
+
+.swal-neon-html {
+  color: var(--muted);
+  font-size: 0.95rem;
+  line-height: 1.65;
+}
+
+.swal-neon-confirm {
+  border: 1px solid rgba(25, 216, 255, 0.38);
+  border-radius: 0.7rem;
+  background: linear-gradient(90deg, rgba(25, 216, 255, 0.14), rgba(124, 60, 255, 0.16));
+  box-shadow: 0 12px 28px rgba(25, 216, 255, 0.12);
+  color: var(--foreground);
+  font-size: 0.9rem;
+  font-weight: 800;
+  padding: 0.72rem 1.15rem;
+  transition:
+    transform 160ms ease,
+    border-color 160ms ease,
+    box-shadow 160ms ease,
+    background 160ms ease;
+}
+
+.swal-neon-confirm:hover {
+  border-color: rgba(25, 216, 255, 0.6);
+  background: linear-gradient(90deg, rgba(25, 216, 255, 0.2), rgba(124, 60, 255, 0.22));
+  box-shadow: 0 16px 34px rgba(25, 216, 255, 0.18);
+  transform: translateY(-1px);
+}
+
+.swal-sync-summary strong {
+  color: var(--foreground);
+}
+
+.swal-sync-list {
+  margin-top: 0.9rem;
+  display: grid;
+  gap: 0.65rem;
+  text-align: left;
+}
+
+.swal-sync-card {
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 0.8rem;
+  background: rgba(0, 0, 0, 0.22);
+  padding: 0.7rem 0.8rem;
+}
+
+.swal-sync-card strong {
+  display: block;
+  color: var(--foreground);
+  font-size: 0.82rem;
+  font-weight: 900;
+}
+
+.swal-sync-card span {
+  display: block;
+  margin-top: 0.25rem;
+  color: var(--muted);
+  font-size: 0.78rem;
+  line-height: 1.45;
+}
+
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,

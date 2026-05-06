@@ -1,4 +1,8 @@
+"use client";
+
 import type { ReactNode } from "react";
+import { useLayoutEffect, useRef, useState } from "react";
+import Image from "next/image";
 import Link from "next/link";
 import { AddAccountProvider, AddAccountTrigger } from "@/features/accounts/components/add-account-dialog";
 import { DashboardBackgroundSync } from "@/features/accounts/components/dashboard-background-sync";
@@ -26,6 +30,12 @@ import { cn } from "@/lib/utils";
 type DashboardViewProps = {
   snapshot: DashboardSnapshot;
   queue: "flex" | "solo-duo";
+  sort: LeaderboardSort;
+  sortDirection: LeaderboardSortDirection;
+};
+
+type LeaderboardState = {
+  queue: DashboardViewProps["queue"];
   sort: LeaderboardSort;
   sortDirection: LeaderboardSortDirection;
 };
@@ -175,7 +185,126 @@ const SORT_LABELS: Record<LeaderboardSort, string> = {
   "win-rate": "Win rate",
 };
 
-export function DashboardView({ snapshot, queue, sort, sortDirection }: DashboardViewProps) {
+function useReorderAnimation(animationKey: string) {
+  const elementsRef = useRef(new Map<string, HTMLElement>());
+  const previousRectsRef = useRef(new Map<string, DOMRect>());
+
+  useLayoutEffect(() => {
+    const currentRects = new Map<string, DOMRect>();
+
+    elementsRef.current.forEach((element, id) => {
+      if (!element.isConnected) return;
+      const rect = element.getBoundingClientRect();
+      if (rect.width === 0 && rect.height === 0) return;
+      currentRects.set(id, rect);
+    });
+
+    if (typeof window !== "undefined" && window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
+      previousRectsRef.current = currentRects;
+      return;
+    }
+
+    currentRects.forEach((rect, id) => {
+      const previousRect = previousRectsRef.current.get(id);
+      const element = elementsRef.current.get(id);
+      if (!previousRect || !element) return;
+
+      const deltaX = previousRect.left - rect.left;
+      const deltaY = previousRect.top - rect.top;
+
+      if (Math.abs(deltaX) < 1 && Math.abs(deltaY) < 1) return;
+
+      element.animate(
+        [
+          {
+            opacity: 0.86,
+            transform: `translate(${deltaX}px, ${deltaY}px) scale(0.985)`,
+          },
+          {
+            opacity: 1,
+            transform: "translate(0px, 0px) scale(1)",
+          },
+        ],
+        {
+          duration: 440,
+          easing: "cubic-bezier(0.22, 1, 0.36, 1)",
+        },
+      );
+    });
+
+    previousRectsRef.current = currentRects;
+  }, [animationKey]);
+
+  return (id: string) => (node: HTMLElement | null) => {
+    if (node) {
+      elementsRef.current.set(id, node);
+      return;
+    }
+    elementsRef.current.delete(id);
+  };
+}
+
+function LeaderboardNavLink({
+  children,
+  className,
+  nextState,
+  onNavigate,
+}: {
+  children: ReactNode;
+  className?: string;
+  nextState: LeaderboardState;
+  onNavigate: (nextState: LeaderboardState) => void;
+}) {
+  return (
+    <Link
+      className={className}
+      href={leaderboardHref(nextState.queue, nextState.sort, nextState.sortDirection)}
+      onClick={(event) => {
+        event.preventDefault();
+        onNavigate(nextState);
+      }}
+      prefetch={false}
+      scroll={false}
+    >
+      {children}
+    </Link>
+  );
+}
+
+export function DashboardView({
+  snapshot,
+  queue: initialQueue,
+  sort: initialSort,
+  sortDirection: initialSortDirection,
+}: DashboardViewProps) {
+  const [leaderboardState, setLeaderboardState] = useState<LeaderboardState>(() => ({
+    queue: initialQueue,
+    sort: initialSort,
+    sortDirection: initialSortDirection,
+  }));
+
+  const queue = leaderboardState.queue;
+  const sort = leaderboardState.sort;
+  const sortDirection = leaderboardState.sortDirection;
+
+  const navigateLeaderboard = (nextState: LeaderboardState) => {
+    setLeaderboardState((current) => {
+      if (
+        current.queue === nextState.queue &&
+        current.sort === nextState.sort &&
+        current.sortDirection === nextState.sortDirection
+      ) {
+        return current;
+      }
+
+      if (typeof window !== "undefined") {
+        window.history.replaceState(window.history.state, "", leaderboardHref(nextState.queue, nextState.sort, nextState.sortDirection));
+      }
+
+      return nextState;
+    });
+  };
+
   const memberAccounts = snapshot.members.flatMap((member) =>
     member.accounts.map((account) => ({ ...account, member })),
   );
@@ -200,6 +329,9 @@ export function DashboardView({ snapshot, queue, sort, sortDirection }: Dashboar
     id: member.id,
     name: member.name,
   }));
+  const leaderboardAnimationKey = `${queue}:${sort}:${sortDirection}:${sortedAccounts.map((account) => account.id).join("|")}`;
+  const registerDesktopRow = useReorderAnimation(`desktop:${leaderboardAnimationKey}`);
+  const registerMobileCard = useReorderAnimation(`mobile:${leaderboardAnimationKey}`);
 
   return (
     <AddAccountProvider groupId={snapshot.group.id}>
@@ -295,12 +427,40 @@ export function DashboardView({ snapshot, queue, sort, sortDirection }: Dashboar
               </div>
             </div>
             <div className="flex flex-wrap items-center justify-end gap-2 self-start">
-              <Link href={leaderboardHref("flex", sort, sortDirection)}><Badge tone={queue === "flex" ? "teal" : "neutral"}>Flex</Badge></Link>
-              <Link href={leaderboardHref("solo-duo", sort, sortDirection)}><Badge tone={queue === "solo-duo" ? "teal" : "neutral"}>Solo/Duo</Badge></Link>
+              <LeaderboardNavLink
+                nextState={{ queue: "flex", sort, sortDirection }}
+                onNavigate={navigateLeaderboard}
+              >
+                <Badge tone={queue === "flex" ? "teal" : "neutral"}>Flex</Badge>
+              </LeaderboardNavLink>
+              <LeaderboardNavLink
+                nextState={{ queue: "solo-duo", sort, sortDirection }}
+                onNavigate={navigateLeaderboard}
+              >
+                <Badge tone={queue === "solo-duo" ? "teal" : "neutral"}>Solo/Duo</Badge>
+              </LeaderboardNavLink>
               <span className="mx-1 hidden h-5 w-px bg-cyan-200/14 md:hidden sm:block" />
-              <Link className="md:hidden" href={leaderboardHref(queue, "rank", nextSortDirection(sort, sortDirection, "rank"))}><Badge tone={sort === "rank" ? "teal" : "neutral"}>Rango {sort === "rank" ? (sortDirection === "asc" ? "↑" : "↓") : ""}</Badge></Link>
-              <Link className="md:hidden" href={leaderboardHref(queue, "games", nextSortDirection(sort, sortDirection, "games"))}><Badge tone={sort === "games" ? "teal" : "neutral"}>Partidas {sort === "games" ? (sortDirection === "asc" ? "↑" : "↓") : ""}</Badge></Link>
-              <Link className="md:hidden" href={leaderboardHref(queue, "win-rate", nextSortDirection(sort, sortDirection, "win-rate"))}><Badge tone={sort === "win-rate" ? "teal" : "neutral"}>Win rate {sort === "win-rate" ? (sortDirection === "asc" ? "↑" : "↓") : ""}</Badge></Link>
+              <LeaderboardNavLink
+                className="md:hidden"
+                nextState={{ queue, sort: "rank", sortDirection: nextSortDirection(sort, sortDirection, "rank") }}
+                onNavigate={navigateLeaderboard}
+              >
+                <Badge tone={sort === "rank" ? "teal" : "neutral"}>Rango {sort === "rank" ? (sortDirection === "asc" ? "↑" : "↓") : ""}</Badge>
+              </LeaderboardNavLink>
+              <LeaderboardNavLink
+                className="md:hidden"
+                nextState={{ queue, sort: "games", sortDirection: nextSortDirection(sort, sortDirection, "games") }}
+                onNavigate={navigateLeaderboard}
+              >
+                <Badge tone={sort === "games" ? "teal" : "neutral"}>Partidas {sort === "games" ? (sortDirection === "asc" ? "↑" : "↓") : ""}</Badge>
+              </LeaderboardNavLink>
+              <LeaderboardNavLink
+                className="md:hidden"
+                nextState={{ queue, sort: "win-rate", sortDirection: nextSortDirection(sort, sortDirection, "win-rate") }}
+                onNavigate={navigateLeaderboard}
+              >
+                <Badge tone={sort === "win-rate" ? "teal" : "neutral"}>Win rate {sort === "win-rate" ? (sortDirection === "asc" ? "↑" : "↓") : ""}</Badge>
+              </LeaderboardNavLink>
               <SyncAllAccountsButton groupId={snapshot.group.id} />
             </div>
           </div>
@@ -312,15 +472,15 @@ export function DashboardView({ snapshot, queue, sort, sortDirection }: Dashboar
                   <thead className="text-[11px] uppercase tracking-[0.08em] text-slate-300/85">
                     <tr>
                       <th className="w-[4.75rem] px-4 py-3 text-center font-black">#</th>
-                      <th className="px-4 py-3 font-black">Propietario</th>
+                      <th className="w-[5.25rem] px-2 py-3 text-center font-black">Propietario</th>
                       <th className="px-4 py-3 font-black">Riot ID</th>
-                      <SortableHeader activeSort={sort} className="px-4 py-3" queue={queue} sort="rank" sortDirection={sortDirection}>
+                      <SortableHeader activeSort={sort} className="px-4 py-3" onNavigate={navigateLeaderboard} queue={queue} sort="rank" sortDirection={sortDirection}>
                         Rango
                       </SortableHeader>
-                      <SortableHeader activeSort={sort} className="px-4 py-3 text-center" queue={queue} sort="games" sortDirection={sortDirection}>
+                      <SortableHeader activeSort={sort} className="px-4 py-3 text-center" onNavigate={navigateLeaderboard} queue={queue} sort="games" sortDirection={sortDirection}>
                         Partidas
                       </SortableHeader>
-                      <SortableHeader activeSort={sort} className="px-4 py-3 text-center" queue={queue} sort="win-rate" sortDirection={sortDirection}>
+                      <SortableHeader activeSort={sort} className="px-4 py-3 text-center" onNavigate={navigateLeaderboard} queue={queue} sort="win-rate" sortDirection={sortDirection}>
                         Win rate
                       </SortableHeader>
                       <th className="whitespace-nowrap px-4 py-3 text-end font-black">Acciones</th>
@@ -334,6 +494,7 @@ export function DashboardView({ snapshot, queue, sort, sortDirection }: Dashboar
                         key={account.id}
                         memberOptions={memberOptions}
                         queue={queue}
+                        rowRef={registerDesktopRow(account.id)}
                       />
                     ))}
                   </tbody>
@@ -345,15 +506,16 @@ export function DashboardView({ snapshot, queue, sort, sortDirection }: Dashboar
               </div>
               <div className="grid min-w-0 gap-3 p-3 sm:p-4 md:hidden">
                 {sortedAccounts.map((account, index) => (
-                  <LeaderboardCard
-                    account={account}
-                    index={index}
-                    key={account.id}
-                    memberOptions={memberOptions}
-                    queue={queue}
-                  />
-                ))}
-              </div>
+                    <LeaderboardCard
+                      account={account}
+                      index={index}
+                      key={account.id}
+                      memberOptions={memberOptions}
+                      queue={queue}
+                      cardRef={registerMobileCard(account.id)}
+                    />
+                  ))}
+                </div>
             </>
           ) : (
             <EmptyState
@@ -375,6 +537,7 @@ function SortableHeader({
   activeSort,
   children,
   className,
+  onNavigate,
   queue,
   sort,
   sortDirection,
@@ -382,24 +545,30 @@ function SortableHeader({
   activeSort: LeaderboardSort;
   children: ReactNode;
   className?: string;
+  onNavigate: (nextState: LeaderboardState) => void;
   queue: "flex" | "solo-duo";
   sort: LeaderboardSort;
   sortDirection: LeaderboardSortDirection;
 }) {
   const active = activeSort === sort;
   const nextDirection = nextSortDirection(activeSort, sortDirection, sort);
+  const nextState: LeaderboardState = {
+    queue,
+    sort,
+    sortDirection: nextDirection,
+  };
 
   return (
     <th className={cn("whitespace-nowrap font-black", className)}>
-      <Link
-        aria-current={active ? "true" : undefined}
+      <LeaderboardNavLink
         className={cn(
           "inline-flex items-center gap-1.5 rounded-md border px-2 py-1 text-slate-200 transition",
           "border-cyan-200/14 bg-white/[0.035] shadow-sm shadow-black/10 hover:border-cyan-300/50 hover:bg-cyan-400/10 hover:text-cyan-100",
           className?.includes("text-center") ? "justify-center" : "justify-start",
           active && "border-cyan-300/70 bg-cyan-400/12 text-cyan-100 shadow-[0_0_14px_rgba(25,216,255,0.18)]",
         )}
-        href={leaderboardHref(queue, sort, nextDirection)}
+        nextState={nextState}
+        onNavigate={onNavigate}
       >
         <span>{children}</span>
         <span
@@ -411,7 +580,7 @@ function SortableHeader({
         >
           {active ? (sortDirection === "asc" ? "↑" : "↓") : "↕"}
         </span>
-      </Link>
+      </LeaderboardNavLink>
     </th>
   );
 }
@@ -588,11 +757,13 @@ function LeaderboardRow({
   index,
   memberOptions,
   queue,
+  rowRef,
 }: {
   account: AccountWithMember;
   index: number;
   memberOptions: MemberOption[];
   queue: "flex" | "solo-duo";
+  rowRef?: (node: HTMLTableRowElement | null) => void;
 }) {
   const queueStats = queue === "solo-duo" ? account.soloDuo : account.flex;
   const rowTone = account.isShared
@@ -605,11 +776,12 @@ function LeaderboardRow({
         "group overflow-hidden rounded-lg outline outline-1 outline-offset-[-1px] transition duration-150",
         rowTone,
       )}
+      ref={rowRef}
     >
       <td className="rounded-l-lg px-4 py-5">
         <RankNumber rank={index + 1} shared={account.isShared} />
       </td>
-      <td className="px-4 py-5">
+      <td className="w-[5.25rem] px-2 py-5 text-center">
         <OwnerIdentity member={account.member} shared={account.isShared} />
       </td>
       <td className="px-4 py-5">
@@ -648,11 +820,13 @@ function LeaderboardCard({
   index,
   memberOptions,
   queue,
+  cardRef,
 }: {
   account: AccountWithMember;
   index: number;
   memberOptions: MemberOption[];
   queue: "flex" | "solo-duo";
+  cardRef?: (node: HTMLElement | null) => void;
 }) {
   const queueStats = queue === "solo-duo" ? account.soloDuo : account.flex;
   const cardStyle =
@@ -670,6 +844,7 @@ function LeaderboardCard({
         "min-w-0 overflow-hidden rounded-xl border p-3 shadow-xl shadow-black/20 sm:p-4",
         cardStyle,
       )}
+      ref={cardRef}
     >
       <div className="flex min-w-0 flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
         <MemberIdentity member={account.member} rank={index + 1} />
@@ -715,30 +890,38 @@ function RankNumber({ rank, shared }: { rank: number; shared: boolean }) {
   );
 }
 
-function OwnerIdentity({ member, shared }: { member: GroupMember | null; shared: boolean }) {
+function OwnerIdentity({
+  member,
+  shared,
+}: {
+  member: GroupMember | null;
+  shared: boolean;
+}) {
+  const ownerName = member?.name ?? "Sin dueño";
+  const ownerHint = shared ? "Cuenta compartida" : ownerName;
+  const ownerAvatarUrl = !shared ? member?.avatarUrl ?? null : null;
+
   return (
-    <div className="flex min-w-0 items-center gap-3.5">
+    <div className="flex justify-center">
       <div
+        aria-label={ownerHint}
         className={cn(
-          "relative flex size-14 shrink-0 items-center justify-center rounded-xl border shadow-lg",
+          "relative flex size-12 shrink-0 items-center justify-center overflow-hidden rounded-xl border shadow-lg",
+          !shared && member ? "cursor-help" : "",
           shared
             ? "hex-mark border-amber-300/38 bg-amber-400/14 text-amber-200 shadow-amber-500/18"
             : "border-cyan-300/26 bg-cyan-400/12 text-cyan-100 shadow-cyan-500/14",
         )}
+        title={ownerHint}
       >
-        {shared ? <LinkIcon className="size-6 drop-shadow-[0_0_10px_currentColor]" /> : <UserIcon className="size-6" />}
-      </div>
-      <div className="min-w-0">
-        <div className="truncate font-black text-white">{member?.name ?? "Sin dueño"}</div>
-        <div
-          className={cn(
-            "mt-0.5 flex items-center gap-1.5 truncate text-xs font-semibold",
-            shared ? "text-amber-300" : "text-slate-400",
-          )}
-        >
-          <span>{shared ? "Cuenta compartida" : member ? formatRole(member.role) : "Sin dueño"}</span>
-          {!shared && member ? <ShieldTinyIcon className="size-3.5 text-cyan-300" /> : null}
-        </div>
+        {shared ? <LinkIcon className="size-6 drop-shadow-[0_0_10px_currentColor]" /> : null}
+        {!shared && ownerAvatarUrl ? (
+          <>
+            <Image alt={ownerName} className="object-cover" fill sizes="48px" src={ownerAvatarUrl} />
+            <span className="absolute inset-0 bg-linear-to-br from-white/22 via-transparent to-black/18" />
+          </>
+        ) : null}
+        {!shared && !ownerAvatarUrl ? <UserIcon className="size-6" /> : null}
       </div>
     </div>
   );

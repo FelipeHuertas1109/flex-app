@@ -84,10 +84,10 @@ export async function fetchRiotAccountStats(
   gameName: string,
   tagLine: string,
   platform: string,
+  apiKey: string,
 ): Promise<AccountStats | null> {
-  const apiKey = process.env.RIOT_API_KEY;
   if (!apiKey) {
-    console.error("Missing RIOT_API_KEY environment variable");
+    console.error("Missing stored Riot API key");
     return null;
   }
 
