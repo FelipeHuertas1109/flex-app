@@ -50,6 +50,7 @@ export type GroupMember = {
   id: string;
   name: string;
   email: string;
+  avatarUrl: string | null;
   role: "owner" | "captain" | "member";
   accounts: LeagueAccount[];
 };

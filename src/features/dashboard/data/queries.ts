@@ -12,6 +12,7 @@ type DashboardProfileRow = {
   id: string;
   email: string;
   full_name: string | null;
+  avatar_url: string | null;
 };
 
 type GroupMemberQueryRow = {
@@ -112,7 +113,7 @@ export async function getDashboardSnapshot(viewerId?: string): Promise<Dashboard
   const groupId = memberRecord.group_id;
   const [groupResult, membersResult, accountsResult, invitesResult] = await Promise.all([
     supabase.from("groups").select("id, name, created_at").eq("id", groupId).single(),
-    supabase.from("group_members").select("role, joined_at, profiles(id, email, full_name)").eq("group_id", groupId),
+    supabase.from("group_members").select("role, joined_at, profiles(id, email, full_name, avatar_url)").eq("group_id", groupId),
     supabase
       .from("group_accounts")
       .select(
@@ -185,6 +186,7 @@ export async function getDashboardSnapshot(viewerId?: string): Promise<Dashboard
       id: m.profiles.id,
       name: m.profiles.full_name || "Usuario Desconocido",
       email: m.profiles.email,
+      avatarUrl: m.profiles.avatar_url ?? null,
       role: toMemberRole(m.role),
       accounts,
     };

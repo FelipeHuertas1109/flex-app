@@ -3,13 +3,12 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 
-type NavIconName = "grid" | "nodes" | "rank" | "mail";
+type NavIconName = "grid" | "mail" | "key";
 
 const navItems: { label: string; icon: NavIconName; href: string }[] = [
   { href: "/", label: "Dashboard", icon: "grid" },
-  { href: "#", label: "Grupos", icon: "nodes" },
-  { href: "#", label: "Cuentas", icon: "rank" },
   { href: "/invitaciones", label: "Invitaciones", icon: "mail" },
+  { href: "/key", label: "RIOT KEY", icon: "key" },
 ];
 
 function isNavActive(pathname: string, href: string) {
@@ -70,24 +69,14 @@ function NavIcon({ active, type }: { active: boolean; type: NavIconName }) {
     );
   }
 
-  if (type === "nodes") {
+  if (type === "key") {
     return (
       <svg {...common}>
-        <circle cx="7" cy="7" r="2.35" />
-        <circle cx="17" cy="7" r="2.35" />
-        <circle cx="7" cy="17" r="2.35" />
-        <circle cx="17" cy="17" r="2.35" />
-      </svg>
-    );
-  }
-
-  if (type === "rank") {
-    return (
-      <svg {...common}>
-        <path d="m12 3.25 7.5 4.35v8.8L12 20.75 4.5 16.4V7.6L12 3.25Z" />
-        <path d="m8.15 10.25 3.85-2.2 3.85 2.2" />
-        <path d="m8.15 13.75 3.85 2.2 3.85-2.2" />
-        <path d="M12 8.05v7.9" opacity="0.45" />
+        <circle cx="8.25" cy="12" r="2.75" />
+        <path d="M11 12h9" />
+        <path d="M15.5 12v2.2" />
+        <path d="M18.65 12v1.35" />
+        <path d="m6.35 13.85-1.7 1.7" opacity="0.55" />
       </svg>
     );
   }

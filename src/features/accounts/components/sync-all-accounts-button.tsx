@@ -1,9 +1,11 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useTransition } from "react";
 import { useRouter } from "next/navigation";
+import Swal from "sweetalert2";
 import { Button } from "@/components/ui/button";
 import { syncAllAccounts } from "@/features/accounts/actions";
+import { RECENT_SYNC_CACHE_MS, runCachedGroupSync } from "@/features/accounts/lib/sync-all-cache";
 
 type SyncAllAccountsButtonProps = {
   groupId: string;
@@ -12,23 +14,74 @@ type SyncAllAccountsButtonProps = {
 export function SyncAllAccountsButton({ groupId }: SyncAllAccountsButtonProps) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
-  const [error, setError] = useState<string | null>(null);
-  const [failedAccounts, setFailedAccounts] = useState<Array<{ error: string; label: string }>>([]);
-  const [status, setStatus] = useState<string | null>(null);
+
+  function escapeHtml(value: string) {
+    return value
+      .replaceAll("&", "&amp;")
+      .replaceAll("<", "&lt;")
+      .replaceAll(">", "&gt;")
+      .replaceAll('"', "&quot;")
+      .replaceAll("'", "&#39;");
+  }
+
+  async function showSyncModal(result: Awaited<ReturnType<typeof syncAllAccounts>>, fromCache: boolean) {
+    if (result.error) {
+      await Swal.fire({
+        background: "#07111f",
+        buttonsStyling: false,
+        color: "#f7fbff",
+        confirmButtonText: "Entendido",
+        customClass: {
+          confirmButton: "swal-neon-confirm",
+          htmlContainer: "swal-neon-html",
+          popup: "swal-neon-popup",
+          title: "swal-neon-title",
+        },
+        icon: "error",
+        text: result.error,
+        title: "No se pudo sincronizar",
+      });
+      return;
+    }
+
+    const failedAccounts = result.failedAccounts ?? [];
+    const hasFailures = failedAccounts.length > 0;
+    const cacheHtml = fromCache
+      ? '<p class="swal-sync-summary" style="margin-top:0.6rem;">Usando el resultado reciente del cache del dashboard.</p>'
+      : "";
+    const failedHtml = hasFailures
+      ? `<div class="swal-sync-list">${failedAccounts
+          .map(
+            (account) =>
+              `<div class="swal-sync-card"><strong>${escapeHtml(account.label)}</strong><span>${escapeHtml(account.error)}</span></div>`,
+          )
+          .join("")}</div>`
+      : "";
+
+    await Swal.fire({
+      background: "#07111f",
+      buttonsStyling: false,
+      color: "#f7fbff",
+      confirmButtonText: hasFailures ? "Revisar" : "Aceptar",
+      customClass: {
+        confirmButton: "swal-neon-confirm",
+        htmlContainer: "swal-neon-html",
+        popup: "swal-neon-popup",
+        title: "swal-neon-title",
+      },
+      html: `<p class="swal-sync-summary">Actualizadas: <strong>${result.synced}</strong>. Fallidas: <strong>${result.failed}</strong>.</p>${cacheHtml}${failedHtml}`,
+      icon: hasFailures ? "warning" : "success",
+      title: hasFailures ? "Sincronizacion completada con fallas" : "Sincronizacion completada",
+    });
+  }
 
   const handleSyncAll = () => {
-    setError(null);
-    setFailedAccounts([]);
-    setStatus(null);
     startTransition(async () => {
-      const result = await syncAllAccounts(groupId);
-      if (result.error) {
-        setError(result.error);
-        return;
+      const response = await runCachedGroupSync(groupId, { freshMs: RECENT_SYNC_CACHE_MS });
+      if (!response.fromCache && !response.result.error) {
+        router.refresh();
       }
-      setFailedAccounts(result.failedAccounts ?? []);
-      setStatus(`Actualizadas: ${result.synced}. Fallidas: ${result.failed}.`);
-      router.refresh();
+      await showSyncModal(response.result, response.fromCache);
     });
   };
 
@@ -37,25 +90,6 @@ export function SyncAllAccountsButton({ groupId }: SyncAllAccountsButtonProps) {
       <Button className="h-8 px-3 text-xs" variant="secondary" onClick={handleSyncAll} disabled={isPending}>
         {isPending ? "Sincronizando..." : "Sincronizar todo"}
       </Button>
-      {error ? <p className="text-right text-[11px] text-pink-400">{error}</p> : null}
-      {status ? (
-        <div className="group relative">
-          <p className="text-right text-[11px] text-cyan-300">{status}</p>
-          {failedAccounts.length > 0 ? (
-            <div className="pointer-events-none absolute right-0 top-full z-50 mt-2 hidden w-72 rounded-lg border border-pink-300/24 bg-[#07111f] p-3 text-left shadow-2xl shadow-black/40 ring-1 ring-white/8 group-hover:block">
-              <p className="text-[10px] font-black uppercase tracking-[0.16em] text-pink-300">Fallaron</p>
-              <div className="mt-2 grid gap-2">
-                {failedAccounts.map((account) => (
-                  <div className="rounded-md border border-white/10 bg-black/24 p-2" key={account.label}>
-                    <p className="truncate text-xs font-black text-white">{account.label}</p>
-                    <p className="mt-0.5 line-clamp-2 text-[11px] leading-4 text-slate-400">{account.error}</p>
-                  </div>
-                ))}
-              </div>
-            </div>
-          ) : null}
-        </div>
-      ) : null}
     </div>
   );
 }

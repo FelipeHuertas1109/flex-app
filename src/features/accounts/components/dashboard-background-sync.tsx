@@ -2,25 +2,15 @@
 
 import { useRouter } from "next/navigation";
 import { useEffect, useRef } from "react";
-import { syncAllAccounts } from "@/features/accounts/actions";
-
-/** Minutos entre syncs automaticos si no defines env (5–120). */
-const DEFAULT_MINUTES = 5;
-
-const FIRST_DELAY_MS = 120_000;
-
-function resolvedIntervalMs(): number {
-  const raw = process.env.NEXT_PUBLIC_DASHBOARD_RIOT_SYNC_MINUTES;
-  const n = raw !== undefined ? Number(raw) : DEFAULT_MINUTES;
-  const bounded = Number.isFinite(n)
-    ? Math.min(120, Math.max(5, Math.floor(n)))
-    : DEFAULT_MINUTES;
-  return bounded * 60 * 1000;
-}
+import {
+  FIRST_SYNC_DELAY_MS,
+  resolvedSyncIntervalMs,
+  runCachedGroupSync,
+} from "@/features/accounts/lib/sync-all-cache";
 
 /**
  * Mientras el usuario mantiene el dashboard abierto, llama periodicamente a
- * syncAllAccounts (misma logica que «Sincronizar todo») y refresca datos.
+ * syncAllAccounts y refresca datos solo cuando hubo una sincronizacion real.
  *
  * Opcional en `.env.local`: NEXT_PUBLIC_DASHBOARD_RIOT_SYNC_MINUTES=15
  *
@@ -32,7 +22,7 @@ export function DashboardBackgroundSync({ groupId }: { groupId: string }) {
   const running = useRef(false);
 
   useEffect(() => {
-    const period = resolvedIntervalMs();
+    const period = resolvedSyncIntervalMs();
 
     const tick = async () => {
       if (typeof document !== "undefined" && document.visibilityState !== "visible") {
@@ -41,17 +31,19 @@ export function DashboardBackgroundSync({ groupId }: { groupId: string }) {
       if (running.current) return;
       running.current = true;
       try {
-        const result = await syncAllAccounts(groupId);
-        if ("error" in result && result.error) {
+        const response = await runCachedGroupSync(groupId, { freshMs: period });
+        if (response.result.error) {
           return;
         }
-        router.refresh();
+        if (!response.fromCache) {
+          router.refresh();
+        }
       } finally {
         running.current = false;
       }
     };
 
-    const firstId = window.setTimeout(() => void tick(), FIRST_DELAY_MS);
+    const firstId = window.setTimeout(() => void tick(), FIRST_SYNC_DELAY_MS);
     const repeatId = window.setInterval(() => void tick(), period);
 
     return () => {
