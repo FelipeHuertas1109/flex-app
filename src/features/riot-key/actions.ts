@@ -59,6 +59,18 @@ export async function saveRiotApiKey(formData: FormData) {
     return { error: "No se pudo guardar la Riot API Key." };
   }
 
+  // Despues de guardar una nueva API Key, invalidamos todos los PUUIDs de las cuentas de Riot
+  // para que sean consultados frescos en el proximo ciclo o al presionar "Sincronizar".
+  // Esto actualiza TODAS las cuentas de Riot globales reseteando su respectivo PUUID.
+  const { error: clearError } = await adminSupabase
+    .from("riot_accounts")
+    .update({ puuid: null, last_name_updated_at: null })
+    .not("id", "is", null); // Supabase exige un filtro, esto aplica a absolutamente todas las filas
+  
+  if (clearError) {
+    console.error("Error al limpiar PUUIDs tras cambio de API Key:", clearError);
+  }
+
   revalidatePath("/");
   revalidatePath("/key");
   return { success: true as const, updatedAt };

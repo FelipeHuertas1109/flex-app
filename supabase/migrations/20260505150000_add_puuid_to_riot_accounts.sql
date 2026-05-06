@@ -1,0 +1,3 @@
+ALTER TABLE riot_accounts
+ADD COLUMN puuid TEXT UNIQUE,
+ADD COLUMN last_name_updated_at TIMESTAMP WITH TIME ZONE;

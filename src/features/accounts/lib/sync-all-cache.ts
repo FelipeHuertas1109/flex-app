@@ -3,7 +3,7 @@
 import { syncAllAccounts } from "@/features/accounts/actions";
 
 /** Minutos entre syncs automáticos si no defines env (5-120). */
-const DEFAULT_MINUTES = 30;
+const DEFAULT_MINUTES = 15;
 const MIN_MINUTES = 5;
 const MAX_MINUTES = 120;
 
@@ -51,6 +51,7 @@ export async function runCachedGroupSync(
   groupId: string,
   options?: {
     freshMs?: number;
+    isManual?: boolean;
   },
 ): Promise<CachedSyncResponse> {
   const freshMs = options?.freshMs ?? resolvedSyncIntervalMs();
@@ -61,14 +62,15 @@ export async function runCachedGroupSync(
     return entry.inFlight;
   }
 
-  if (entry.lastResult && now - entry.lastCompletedAt < freshMs) {
+  // Si es manual, omitimos el caché de react-cache y hacemos un bypass controlado si es necesario (el server maneja los thresholds).
+  if (!options?.isManual && entry.lastResult && now - entry.lastCompletedAt < freshMs) {
     return {
       fromCache: true,
       result: entry.lastResult,
     };
   }
 
-  const inFlight = syncAllAccounts(groupId)
+  const inFlight = syncAllAccounts(groupId, options?.isManual ?? false)
     .then((result) => {
       entry.lastCompletedAt = Date.now();
       entry.lastResult = result;

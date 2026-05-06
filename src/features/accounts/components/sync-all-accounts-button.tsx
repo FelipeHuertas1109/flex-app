@@ -77,7 +77,10 @@ export function SyncAllAccountsButton({ groupId }: SyncAllAccountsButtonProps) {
 
   const handleSyncAll = () => {
     startTransition(async () => {
-      const response = await runCachedGroupSync(groupId, { freshMs: RECENT_SYNC_CACHE_MS });
+      const response = await runCachedGroupSync(groupId, { 
+        freshMs: RECENT_SYNC_CACHE_MS, 
+        isManual: true 
+      });
       if (!response.fromCache && !response.result.error) {
         router.refresh();
       }

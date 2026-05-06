@@ -12,7 +12,7 @@ import {
  * Mientras el usuario mantiene el dashboard abierto, llama periodicamente a
  * syncAllAccounts y refresca datos solo cuando hubo una sincronizacion real.
  *
- * Opcional en `.env.local`: NEXT_PUBLIC_DASHBOARD_RIOT_SYNC_MINUTES=30
+ * Opcional en `.env.local`: NEXT_PUBLIC_DASHBOARD_RIOT_SYNC_MINUTES=15
  *
  * Limitacion: no corre con la pestana cerrada. Para automatizar siempre usar
  * un cron/Edge Function en infraestructura.

@@ -3,7 +3,7 @@
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { getStoredRiotApiKeyRecord } from "@/lib/riot/api-key";
-import { fetchRiotAccountStats, RiotApiRequestError } from "@/lib/riot/client";
+import { fetchLiveGameByPuuid, fetchLeagueStatsByPuuid, fetchRiotAccountByRiotId, fetchRiotAccountByPuuid, RiotApiRequestError } from "@/lib/riot/client";
 import { cleanRiotIdPart } from "@/lib/riot/format";
 import { revalidatePath } from "next/cache";
 
@@ -32,26 +32,22 @@ function normalizeSavedRoutingPlatform(value: string | null | undefined) {
 }
 
 async function syncRiotAccountById(
-  riotAccountId: string,
-  gameName: string,
-  tagLine: string,
+  riotAccount: {
+    id: string;
+    game_name: string;
+    tag_line: string;
+    puuid: string | null;
+    routing_platform: string | null;
+    last_name_updated_at: string | null;
+    last_synced_at: string | null;
+    live_game_checked_at: string | null;
+  },
   apiKey: string,
-  routingPlatform?: string | null,
+  isManual: boolean = false
 ) {
-  const savedRoutingPlatform = normalizeSavedRoutingPlatform(routingPlatform);
+  const savedRoutingPlatform = normalizeSavedRoutingPlatform(riotAccount.routing_platform);
   if (!savedRoutingPlatform) {
     return { ok: false as const, error: "Cuenta sin region definida." };
-  }
-
-  let stats;
-  try {
-    stats = await fetchRiotAccountStats(gameName, tagLine, savedRoutingPlatform, apiKey);
-  } catch (error) {
-    console.error(`Error consultando Riot API para ${gameName}#${tagLine}:`, error);
-    return {
-      ok: false as const,
-      error: error instanceof RiotApiRequestError ? error.message : "No se pudo consultar Riot API.",
-    };
   }
 
   let adminSupabase;
@@ -60,31 +56,88 @@ async function syncRiotAccountById(
   } catch {
     return { ok: false as const, error: "Falta SUPABASE_SERVICE_ROLE_KEY en el servidor." };
   }
-  const { error } = await adminSupabase
-    .from("riot_accounts")
-    .update({
-      game_name: stats.gameName,
-      tag_line: stats.tagLine,
-      tier: stats.flex.tier,
-      rank: stats.flex.rank,
-      lp: stats.flex.lp,
-      win_rate: stats.flex.winRate,
-      total_games: stats.flex.totalGames,
-      solo_tier: stats.soloDuo.tier,
-      solo_rank: stats.soloDuo.rank,
-      solo_lp: stats.soloDuo.lp,
-      solo_win_rate: stats.soloDuo.winRate,
-      solo_total_games: stats.soloDuo.totalGames,
-      is_in_game: stats.isInGame,
-      live_game_checked_at: new Date().toISOString(),
-      last_synced_at: new Date().toISOString(),
-      routing_platform: stats.routingPlatform ?? savedRoutingPlatform,
-    })
-    .eq("id", riotAccountId);
 
-  if (error) {
-    console.error("Error sincronizando riot_accounts:", error);
-    return { ok: false as const, error: "No se pudo guardar la sincronizacion." };
+  const now = new Date();
+  const ONE_MINUTE = 60 * 1000;
+  
+  // Limites de actualizacion
+  const LIVE_GAME_THRESHOLD = (isManual ? 5 : 15) * ONE_MINUTE; // 5 minutos vivo manual, 15m auto
+  const STATS_THRESHOLD = (isManual ? 10 : 15) * ONE_MINUTE; // 10m manual, 15m auto
+
+  let currentPuuid = riotAccount.puuid;
+  let currentGameName = riotAccount.game_name;
+  let currentTagLine = riotAccount.tag_line;
+  const updates: Record<string, any> = {};
+
+  const needsNameSync = !currentPuuid;
+
+  try {
+    // 1. Account API (PUUID y Nombre)
+    // Solo ocurre si no hay PUUID. Al cambiar la API Key globalmente, se limpian estos PUUIDs
+    // para forzar la re-sincronizacion.
+    if (needsNameSync) {
+      // Siempre buscaremos por Riot ID si el PUUID es nulo
+      // Primera vez buscando PUUID a partir del Riot ID actual
+      const accInfo = await fetchRiotAccountByRiotId(currentGameName, currentTagLine, apiKey);
+      currentPuuid = accInfo.puuid;
+      currentGameName = accInfo.gameName;
+      currentTagLine = accInfo.tagLine;
+      updates.puuid = accInfo.puuid;
+      updates.game_name = accInfo.gameName;
+      updates.tag_line = accInfo.tagLine;
+      updates.last_name_updated_at = now.toISOString();
+    }
+  } catch (error) {
+    console.error(`Error Account API para ${currentGameName}#${currentTagLine}:`, error);
+    // Si falla y no tenemos PUUID todavia, no podemos continuar con el resto
+    if (!currentPuuid) {
+      return { ok: false as const, error: error instanceof RiotApiRequestError ? error.message : "Error encontrando el Riot ID global." };
+    }
+  }
+
+  // 2. League API (Rangos)
+  const timeSinceStatsSync = now.getTime() - (riotAccount.last_synced_at ? new Date(riotAccount.last_synced_at).getTime() : 0);
+  if (timeSinceStatsSync > STATS_THRESHOLD) {
+    try {
+      const stats = await fetchLeagueStatsByPuuid(currentPuuid!, savedRoutingPlatform, apiKey);
+      updates.tier = stats.flex.tier;
+      updates.rank = stats.flex.rank;
+      updates.lp = stats.flex.lp;
+      updates.win_rate = stats.flex.winRate;
+      updates.total_games = stats.flex.totalGames;
+      updates.solo_tier = stats.soloDuo.tier;
+      updates.solo_rank = stats.soloDuo.rank;
+      updates.solo_lp = stats.soloDuo.lp;
+      updates.solo_win_rate = stats.soloDuo.winRate;
+      updates.solo_total_games = stats.soloDuo.totalGames;
+      updates.last_synced_at = now.toISOString();
+    } catch (error) {
+      console.error(`Error League API para ${currentGameName}#${currentTagLine}:`, error);
+    }
+  }
+
+  // 3. Spectator API (Partida en Vivo)
+  const timeSinceLiveCheck = now.getTime() - (riotAccount.live_game_checked_at ? new Date(riotAccount.live_game_checked_at).getTime() : 0);
+  if (timeSinceLiveCheck > LIVE_GAME_THRESHOLD) {
+    try {
+      const isInGame = await fetchLiveGameByPuuid(currentPuuid!, savedRoutingPlatform, apiKey);
+      updates.is_in_game = isInGame;
+      updates.live_game_checked_at = now.toISOString();
+    } catch (error) {
+      console.error(`Error Spectator API para ${currentGameName}#${currentTagLine}:`, error);
+    }
+  }
+
+  if (Object.keys(updates).length > 0) {
+    const { error } = await adminSupabase
+      .from("riot_accounts")
+      .update(updates)
+      .eq("id", riotAccount.id);
+
+    if (error) {
+      console.error("Error sincronizando riot_accounts en BD:", error);
+      return { ok: false as const, error: "No se pudo guardar la sincronizacion parcial o total." };
+    }
   }
 
   return { ok: true as const };
@@ -169,7 +222,7 @@ export async function addAccount(groupId: string, formData: FormData) {
   
   const { data: existingRiotAccount } = await supabase
     .from("riot_accounts")
-    .select("id, routing_platform")
+    .select("id, routing_platform, puuid, last_name_updated_at, last_synced_at")
     .eq("game_name", gameName)
     .eq("tag_line", tagLine)
     .single();
@@ -194,9 +247,22 @@ export async function addAccount(groupId: string, formData: FormData) {
   }
 
   const riotApiKey = await getStoredRiotApiKeyRecord();
+  
+  // Cuando se añade, usamos un objeto dummy para forzar update inmediato de sus datos iniciales
+  const dummyAccountState = {
+    id: riotAccountId,
+    game_name: gameName,
+    tag_line: tagLine,
+    puuid: existingRiotAccount?.puuid ?? null,
+    routing_platform: routingPlatform,
+    last_name_updated_at: existingRiotAccount?.last_name_updated_at ?? null,
+    last_synced_at: existingRiotAccount?.last_synced_at ?? null,
+    live_game_checked_at: null, // Forzar check in-game
+  };
+
   const syncResult =
     riotApiKey.apiKey && !riotApiKey.error
-      ? await syncRiotAccountById(riotAccountId, gameName, tagLine, riotApiKey.apiKey, routingPlatform)
+      ? await syncRiotAccountById(dummyAccountState, riotApiKey.apiKey, true)
       : { ok: false as const, error: riotApiKey.error ?? "No hay una Riot API Key activa. Actualizala en Key." };
 
   // 2. Relacionar la cuenta con el grupo (service role: mismas reglas que update/delete;
@@ -240,7 +306,7 @@ export async function addAccount(groupId: string, formData: FormData) {
   return { success: true };
 }
 
-export async function syncAllAccounts(groupId: string) {
+export async function syncAllAccounts(groupId: string, isManual: boolean = false) {
   const supabase = await createClient();
   const {
     data: { user },
@@ -272,7 +338,7 @@ export async function syncAllAccounts(groupId: string) {
 
   const { data: accounts, error } = await supabase
     .from("group_accounts")
-    .select("riot_account_id, riot_accounts(game_name, tag_line, routing_platform)")
+    .select("riot_account_id, riot_accounts(id, game_name, tag_line, puuid, routing_platform, last_name_updated_at, last_synced_at, live_game_checked_at)")
     .eq("group_id", groupId);
 
   if (error || !accounts) {
@@ -291,11 +357,9 @@ export async function syncAllAccounts(groupId: string) {
     const label = `${riotAccount.game_name}#${riotAccount.tag_line}`;
     try {
       const syncResult = await syncRiotAccountById(
-        account.riot_account_id,
-        riotAccount.game_name,
-        riotAccount.tag_line,
+        riotAccount,
         activeRiotApiKey,
-        riotAccount.routing_platform,
+        isManual
       );
 
       return { ok: syncResult.ok, label, error: syncResult.ok ? undefined : syncResult.error };

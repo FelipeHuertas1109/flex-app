@@ -158,12 +158,43 @@ function toQueueStats(entry: LeagueEntry | undefined): QueueStats {
   };
 }
 
-async function fetchIsInGame(
+export async function fetchRiotAccountByRiotId(
+  gameName: string,
+  tagLine: string,
+  apiKey: string,
+): Promise<{ gameName: string; tagLine: string; puuid: string }> {
+  const headers = { "X-Riot-Token": apiKey };
+  const cleanGameName = cleanRiotIdPart(gameName);
+  const cleanTagLine = cleanRiotIdPart(tagLine);
+
+  const accountUrl = `https://${REGION_ROUTING}.api.riotgames.com/riot/account/v1/accounts/by-riot-id/${encodeURIComponent(cleanGameName)}/${encodeURIComponent(cleanTagLine)}`;
+  return fetchRiotJson<{ gameName: string; tagLine: string; puuid: string }>(accountUrl, {
+    headers,
+    notFoundMessage: `Riot ID no encontrado: ${cleanGameName}#${cleanTagLine}.`,
+    requestLabel: `Account API para ${cleanGameName}#${cleanTagLine}`,
+  });
+}
+
+export async function fetchRiotAccountByPuuid(
+  puuid: string,
+  apiKey: string,
+): Promise<{ gameName: string; tagLine: string; puuid: string }> {
+  const headers = { "X-Riot-Token": apiKey };
+  const accountUrl = `https://${REGION_ROUTING}.api.riotgames.com/riot/account/v1/accounts/by-puuid/${puuid}`;
+  return fetchRiotJson<{ gameName: string; tagLine: string; puuid: string }>(accountUrl, {
+    headers,
+    notFoundMessage: `Riot Account con PUUID no encontrado.`,
+    requestLabel: `Account API by PUUID`,
+  });
+}
+
+export async function fetchLiveGameByPuuid(
   puuid: string,
   platform: string,
-  headers: { "X-Riot-Token": string },
+  apiKey: string,
 ): Promise<boolean> {
-  const spectatorUrl = `https://${platform}.api.riotgames.com/lol/spectator/v5/active-games/by-summoner/${puuid}`;
+  const headers = { "X-Riot-Token": apiKey };
+  const spectatorUrl = `https://${platform}.api.riotgames.com/lol/spectator/v5/active-games/by-puuid/${puuid}`;
   const spectatorRes = await fetch(spectatorUrl, { headers });
 
   if (spectatorRes.ok) return true;
@@ -172,115 +203,33 @@ async function fetchIsInGame(
   throw new Error(`Spectator API error: ${spectatorRes.status}`);
 }
 
-async function fetchSummonerExists(
+export async function fetchLeagueStatsByPuuid(
   puuid: string,
   platform: string,
-  headers: { "X-Riot-Token": string },
-): Promise<boolean> {
-  const summonerUrl = `https://${platform}.api.riotgames.com/lol/summoner/v4/summoners/by-puuid/${puuid}`;
+  apiKey: string,
+): Promise<{ flex: QueueStats; soloDuo: QueueStats }> {
+  const headers = { "X-Riot-Token": apiKey };
+  const leagueUrl = `https://${platform}.api.riotgames.com/lol/league/v4/entries/by-puuid/${puuid}`;
+  
   try {
-    await fetchRiotJson<unknown>(summonerUrl, {
+    const entries = await fetchRiotJson<LeagueEntry[]>(leagueUrl, {
       headers,
-      notFoundMessage: "SUMMONER_NOT_FOUND",
-      requestLabel: `Summoner API en ${platform}`,
+      notFoundMessage: `No hay datos de liga en ${platform}.`,
+      requestLabel: `League API by PUUID`,
     });
-    return true;
+    
+    const flexStats = entries.find((q) => q.queueType === "RANKED_FLEX_SR");
+    const soloDuoStats = entries.find((q) => q.queueType === "RANKED_SOLO_5x5");
+    
+    return {
+      flex: toQueueStats(flexStats),
+      soloDuo: toQueueStats(soloDuoStats),
+    };
   } catch (error) {
     if (error instanceof RiotApiRequestError && error.status === 404) {
-      return false;
+      return { flex: EMPTY_QUEUE_STATS, soloDuo: EMPTY_QUEUE_STATS };
     }
     throw error;
   }
 }
 
-export async function fetchRiotAccountStats(
-  gameName: string,
-  tagLine: string,
-  platform: string,
-  apiKey: string,
-): Promise<AccountStats> {
-  if (!apiKey) {
-    throw new RiotApiRequestError("No hay una Riot API Key activa. Actualizala en Key.");
-  }
-
-  const headers = { "X-Riot-Token": apiKey };
-  const cleanGameName = cleanRiotIdPart(gameName);
-  const cleanTagLine = cleanRiotIdPart(tagLine);
-
-  const accountUrl = `https://${REGION_ROUTING}.api.riotgames.com/riot/account/v1/accounts/by-riot-id/${encodeURIComponent(cleanGameName)}/${encodeURIComponent(cleanTagLine)}`;
-  const accountData = await fetchRiotJson<{ gameName: string; tagLine: string; puuid: string }>(accountUrl, {
-    headers,
-    notFoundMessage: `Riot ID no encontrado: ${cleanGameName}#${cleanTagLine}.`,
-    requestLabel: `Account API para ${cleanGameName}#${cleanTagLine}`,
-  });
-  const puuid = accountData.puuid;
-
-  const normalizedPlatform = platform.trim().toLowerCase();
-  const platformCandidates = [normalizedPlatform];
-
-  let bestNonEmpty: { entries: LeagueEntry[]; platform: string } | null = null;
-  let firstReachablePlatform: string | null = null;
-
-  for (const candidate of platformCandidates) {
-    const summonerExists = await fetchSummonerExists(puuid, candidate, headers);
-    if (!summonerExists) {
-      continue;
-    }
-
-    firstReachablePlatform ??= candidate;
-
-    const leagueUrl = `https://${candidate}.api.riotgames.com/lol/league/v4/entries/by-puuid/${puuid}`;
-    const entries = await fetchRiotJson<LeagueEntry[]>(leagueUrl, {
-      headers,
-      notFoundMessage: `No hay datos de liga para ${accountData.gameName}#${accountData.tagLine} en ${candidate}.`,
-      requestLabel: `League API para ${accountData.gameName}#${accountData.tagLine}`,
-    });
-    const isInGame = await fetchIsInGame(puuid, candidate, headers).catch((error) => {
-      console.warn(`No se pudo consultar partida en vivo para ${gameName}#${tagLine} en ${candidate}:`, error);
-      return false;
-    });
-    const flexStats = entries.find((q) => q.queueType === "RANKED_FLEX_SR");
-    const soloDuoStats = entries.find((q) => q.queueType === "RANKED_SOLO_5x5");
-    if (flexStats || soloDuoStats || isInGame) {
-      return {
-        gameName: accountData.gameName,
-        tagLine: accountData.tagLine,
-        flex: toQueueStats(flexStats),
-        isInGame,
-        soloDuo: toQueueStats(soloDuoStats),
-        routingPlatform: candidate,
-      };
-    }
-
-    if (entries.length > 0 && !bestNonEmpty) {
-      bestNonEmpty = { entries, platform: candidate };
-    }
-  }
-
-  if (bestNonEmpty) {
-    return {
-      gameName: accountData.gameName,
-      tagLine: accountData.tagLine,
-      flex: EMPTY_QUEUE_STATS,
-      isInGame: false,
-      soloDuo: EMPTY_QUEUE_STATS,
-      routingPlatform: bestNonEmpty.platform,
-    };
-  }
-
-  if (normalizedPlatform && !firstReachablePlatform) {
-    throw new RiotApiRequestError(
-      `La cuenta existe, pero no se encontro en la region guardada (${normalizedPlatform}). Revisa la region.`,
-      404,
-    );
-  }
-
-  return {
-    gameName: accountData.gameName,
-    tagLine: accountData.tagLine,
-    flex: EMPTY_QUEUE_STATS,
-    isInGame: false,
-    soloDuo: EMPTY_QUEUE_STATS,
-    routingPlatform: firstReachablePlatform,
-  };
-}
