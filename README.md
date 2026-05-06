@@ -37,4 +37,5 @@ Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/bui
 
 ## Developers
 
-* Juan Sebastian Romero Aguirre
+- 90%: Felipe Huertas, Santiago Roldan, Luis Perez
+- 10%: Cristian Rojas, Jorge Rodriguez, Juan Romero, Claude
