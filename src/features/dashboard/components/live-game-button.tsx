@@ -26,7 +26,7 @@ export function LiveGameButton({ gameName, inGame, region, tagLine }: LiveGameBu
         title="No esta en partida"
         type="button"
       >
-        En Vivo
+        Jugando
       </button>
     );
   }
@@ -39,7 +39,7 @@ export function LiveGameButton({ gameName, inGame, region, tagLine }: LiveGameBu
       target="_blank"
       title="Abrir partida en vivo"
     >
-      En Vivo
+      Jugando
     </a>
   );
 }
