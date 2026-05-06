@@ -7,6 +7,7 @@ import { getStoredRiotApiKeyRecord } from "@/lib/riot/api-key";
 import {
   fetchLeagueStatsByPuuid,
   fetchMatchById,
+  fetchMatchTimelineById,
   fetchMatchIdsByPuuid,
   fetchRiotAccountByRiotId,
   RiotApiRequestError,
@@ -14,7 +15,12 @@ import {
   type RiotMatchParticipantDto,
 } from "@/lib/riot/client";
 import { routingPlatformToRegionLabel } from "@/lib/riot/routing-platform";
-import type { MatchHistoryItem, MatchHistoryParticipant, MatchHistoryResult } from "@/features/match-history/types";
+import type {
+  MatchHistoryAccount,
+  MatchHistoryItem,
+  MatchHistoryParticipant,
+  MatchHistoryResult,
+} from "@/features/match-history/types";
 
 const QUEUE_LABELS: Record<number, string> = {
   400: "Normal Draft",
@@ -673,4 +679,182 @@ export async function getMatchParticipantTiers(
   });
 
   return Object.fromEntries(results.map((r) => [r.puuid, { tier: r.tier, division: r.division }]));
+}
+
+export async function getMatchHistoryItem(
+  groupAccountId: string,
+  queue: QueueFilter,
+  matchId: string,
+): Promise<{ account?: MatchHistoryAccount; error?: string; match?: MatchHistoryItem }> {
+  const result = await getMatchHistory(groupAccountId, queue);
+  if (!("matches" in result)) return { error: result.error };
+
+  const match = result.matches.find((item: MatchHistoryItem) => item.matchId === matchId);
+  if (!match) {
+    return { error: "No se encontro la partida solicitada para esta cuenta/cola." };
+  }
+
+  return { account: result.account, match };
+}
+
+type DeepAnalysis = {
+  damageByPlayer: { championName: string; damage: number; participantId: number; riotId: string; teamId: number }[];
+  goldAdvantage: { goldDiff: number; minute: number }[];
+  itemTimeline: { itemId: number; itemImageUrl: string | null; itemName: string; minute: number }[];
+  summary: {
+    csPerMinute: number;
+    gold: number;
+    killParticipation: number;
+    kda: string;
+    role: string;
+    visionScore: number;
+  };
+  teamObjectives: {
+    blue: { baron: number; dragon: number; herald: number; inhibitor: number; tower: number };
+    red: { baron: number; dragon: number; herald: number; inhibitor: number; tower: number };
+  };
+};
+
+export async function getMatchDeepAnalysis(
+  groupAccountId: string,
+  queue: QueueFilter,
+  matchId: string,
+): Promise<{ account?: MatchHistoryAccount; error?: string; match?: MatchHistoryItem; analysis?: DeepAnalysis }> {
+  const basic = await getMatchHistoryItem(groupAccountId, queue, matchId);
+  if (basic.error || !basic.match || !basic.account) return { error: basic.error ?? "No se pudo cargar la partida" };
+
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return { error: "No autorizado" };
+
+  const { data: groupAccount } = await supabase
+    .from("group_accounts")
+    .select("group_id, riot_accounts(puuid, routing_platform)")
+    .eq("id", groupAccountId)
+    .single();
+  if (!groupAccount) return { error: "Cuenta no encontrada" };
+
+  const { data: isMember } = await supabase
+    .from("group_members")
+    .select("id")
+    .eq("group_id", groupAccount.group_id)
+    .eq("user_id", user.id)
+    .single();
+  if (!isMember) return { error: "No perteneces a este grupo" };
+
+  const riotAccRaw = normalizeJoinedRow(groupAccount.riot_accounts as { puuid: string | null; routing_platform: string | null } | { puuid: string | null; routing_platform: string | null }[] | null);
+  const puuid = riotAccRaw?.puuid;
+  const platform = riotAccRaw?.routing_platform?.toLowerCase() ?? null;
+  if (!puuid || !platform) return { error: "Cuenta sin PUUID o region valida." };
+
+  const riotApiKey = await getStoredRiotApiKeyRecord();
+  if (riotApiKey.error || !riotApiKey.apiKey) return { error: riotApiKey.error ?? "No hay Riot API Key activa." };
+
+  try {
+    const [matchRaw, timeline, itemsMap] = await Promise.all([
+      fetchMatchById(matchId, platform, riotApiKey.apiKey),
+      fetchMatchTimelineById(matchId, platform, riotApiKey.apiKey),
+      getItemsMap(),
+    ]);
+    const participant = matchRaw.info.participants.find((p) => p.puuid === puuid);
+    if (!participant) return { error: "No se encontro al jugador dentro de la partida." };
+
+    const teamKills = matchRaw.info.participants
+      .filter((p) => p.teamId === participant.teamId)
+      .reduce((sum, p) => sum + (p.kills || 0), 0);
+    const summary = {
+      csPerMinute: Number((((participant.totalMinionsKilled || 0) + (participant.neutralMinionsKilled || 0)) / Math.max(1, (matchRaw.info.gameDuration || 0) / 60)).toFixed(2)),
+      gold: participant.goldEarned || 0,
+      killParticipation: teamKills > 0 ? Math.round(((participant.kills + participant.assists) / teamKills) * 100) : 0,
+      kda: participantKda(participant),
+      role: participant.teamPosition || participant.individualPosition || participant.lane || "Sin rol",
+      visionScore: participant.visionScore || 0,
+    };
+
+    const teamByParticipantId = new Map(matchRaw.info.participants.map((p) => [p.participantId, p.teamId]));
+    const goldAdvantage = timeline.info.frames.map((frame) => {
+      let blue = 0;
+      let red = 0;
+      Object.values(frame.participantFrames ?? {}).forEach((entry) => {
+        const teamId = teamByParticipantId.get(entry.participantId) ?? 100;
+        const gold = entry.totalGold ?? 0;
+        if (teamId === 100) blue += gold;
+        else red += gold;
+      });
+      return {
+        goldDiff: blue - red,
+        minute: Math.round((frame.timestamp || 0) / 60000),
+      };
+    });
+
+    const selectedParticipantId = participant.participantId;
+    const itemTimeline = timeline.info.frames.flatMap((frame) =>
+      (frame.events ?? [])
+        .filter((event) =>
+          typeof event === "object" &&
+          event !== null &&
+          (event as { type?: string }).type === "ITEM_PURCHASED" &&
+          (event as { participantId?: number }).participantId === selectedParticipantId &&
+          typeof (event as { itemId?: number }).itemId === "number",
+        )
+        .map((event) => {
+          const itemId = (event as { itemId: number }).itemId;
+          const item = itemsMap.get(String(itemId));
+          return {
+            itemId,
+            itemImageUrl: item?.imageUrl ?? null,
+            itemName: item?.name ?? `Item #${itemId}`,
+            minute: Math.round(((event as { timestamp?: number }).timestamp ?? frame.timestamp) / 60000),
+          };
+        }),
+    );
+
+    const team100 = matchRaw.info.teams.find((t) => t.teamId === 100);
+    const team200 = matchRaw.info.teams.find((t) => t.teamId === 200);
+    const objectives = {
+      blue: {
+        baron: team100?.objectives?.baron?.kills ?? 0,
+        dragon: team100?.objectives?.dragon?.kills ?? 0,
+        herald: team100?.objectives?.riftHerald?.kills ?? 0,
+        inhibitor: team100?.objectives?.inhibitor?.kills ?? 0,
+        tower: team100?.objectives?.tower?.kills ?? 0,
+      },
+      red: {
+        baron: team200?.objectives?.baron?.kills ?? 0,
+        dragon: team200?.objectives?.dragon?.kills ?? 0,
+        herald: team200?.objectives?.riftHerald?.kills ?? 0,
+        inhibitor: team200?.objectives?.inhibitor?.kills ?? 0,
+        tower: team200?.objectives?.tower?.kills ?? 0,
+      },
+    };
+
+    const damageByPlayer = matchRaw.info.participants.map((p) => ({
+      championName: p.championName,
+      damage: p.totalDamageDealtToChampions || 0,
+      participantId: p.participantId,
+      riotId: riotId(p),
+      teamId: p.teamId,
+    }));
+
+    return {
+      account: basic.account,
+      analysis: {
+        damageByPlayer,
+        goldAdvantage,
+        itemTimeline,
+        summary,
+        teamObjectives: objectives,
+      },
+      match: basic.match,
+    };
+  } catch (error) {
+    return {
+      error:
+        error instanceof RiotApiRequestError
+          ? error.message
+          : "No se pudo calcular el analisis profundo de la partida.",
+    };
+  }
 }

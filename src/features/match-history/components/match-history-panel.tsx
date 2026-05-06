@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState, useTransition } from "react";
 import Image from "next/image";
+import Link from "next/link";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Panel } from "@/components/ui/panel";
@@ -126,7 +127,12 @@ export function MatchHistoryPanel({ snapshot }: { snapshot: DashboardSnapshot })
               ) : selectedHistory?.error ? (
                 <HistoryMessage title="No se pudo cargar el historial" description={selectedHistory.error} />
               ) : selectedHistory?.error === null && selectedHistory.matches.length ? (
-                <MatchList matches={selectedHistory.matches} routingPlatform={selectedHistory.account.routingPlatform ?? ""} />
+                <MatchList
+                  accountId={selectedHistory.account.id}
+                  matches={selectedHistory.matches}
+                  queue={queue}
+                  routingPlatform={selectedHistory.account.routingPlatform ?? ""}
+                />
               ) : selectedHistory ? (
                 <HistoryMessage
                   title="Sin partidas recientes"
@@ -197,16 +203,28 @@ function HistoryAccountsList({
   );
 }
 
-function MatchList({ matches, routingPlatform }: { matches: MatchHistoryItem[]; routingPlatform: string }) {
+function MatchList({
+  accountId,
+  matches,
+  queue,
+  routingPlatform,
+}: {
+  accountId: string;
+  matches: MatchHistoryItem[];
+  queue: QueueFilter;
+  routingPlatform: string;
+}) {
   const [expandedMatchId, setExpandedMatchId] = useState<string | null>(null);
 
   return (
     <div className="space-y-3">
       {matches.map((match) => (
         <MatchCard
+          accountId={accountId}
           expanded={expandedMatchId === match.id}
           key={match.id}
           match={match}
+          queue={queue}
           routingPlatform={routingPlatform}
           onToggle={() => setExpandedMatchId((current) => (current === match.id ? null : match.id))}
         />
@@ -216,14 +234,18 @@ function MatchList({ matches, routingPlatform }: { matches: MatchHistoryItem[]; 
 }
 
 function MatchCard({
+  accountId,
   expanded,
   match,
   onToggle,
+  queue,
   routingPlatform,
 }: {
+  accountId: string;
   expanded: boolean;
   match: MatchHistoryItem;
   onToggle: () => void;
+  queue: QueueFilter;
   routingPlatform: string;
 }) {
   const won = match.result === "Victoria";
@@ -309,7 +331,13 @@ function MatchCard({
               )}
             </div>
           </div>
-          <div className="flex justify-end">
+          <div className="flex flex-wrap items-center justify-end gap-2">
+            <Link
+              className="inline-flex h-8 items-center justify-center rounded-lg border border-violet-300/40 bg-violet-500/12 px-3 text-xs font-black text-violet-100 transition hover:border-violet-200/70 hover:bg-violet-500/18"
+              href={`/historial/partida/${match.matchId}?account=${accountId}&queue=${queue}`}
+            >
+              Ver analisis
+            </Link>
             <Button
               aria-expanded={expanded}
               className="h-8 px-3 text-xs"
@@ -329,18 +357,26 @@ function MatchCard({
       {expanded ? <ExpandedMatchDetails match={match} routingPlatform={routingPlatform} /> : null}
 
       <div className="flex justify-end border-t border-white/8 px-4 py-3">
-        <Button
-          aria-expanded={expanded}
-          className="h-9 px-3 text-xs"
-          onClick={onToggle}
-          type="button"
-          variant="ghost"
-        >
-          {expanded ? "Contraer partida" : "Ampliar partida"}
-          <span aria-hidden="true" className="text-sm leading-none">
-            {expanded ? "⌃" : "⌄"}
-          </span>
-        </Button>
+        <div className="flex flex-wrap items-center justify-end gap-2">
+          <Link
+            className="inline-flex h-9 items-center justify-center rounded-lg border border-violet-300/40 bg-violet-500/12 px-3 text-xs font-black text-violet-100 transition hover:border-violet-200/70 hover:bg-violet-500/18"
+            href={`/historial/partida/${match.matchId}?account=${accountId}&queue=${queue}`}
+          >
+            Ver analisis
+          </Link>
+          <Button
+            aria-expanded={expanded}
+            className="h-9 px-3 text-xs"
+            onClick={onToggle}
+            type="button"
+            variant="ghost"
+          >
+            {expanded ? "Contraer partida" : "Ampliar partida"}
+            <span aria-hidden="true" className="text-sm leading-none">
+              {expanded ? "⌃" : "⌄"}
+            </span>
+          </Button>
+        </div>
       </div>
     </article>
   );

@@ -157,6 +157,36 @@ export type RiotMatchParticipantDto = {
   challenges?: Record<string, number>;
 };
 
+export type RiotMatchTimelineDto = {
+  info: {
+    frameInterval: number;
+    frames: {
+      events: Array<
+        | {
+            itemId?: number;
+            participantId?: number;
+            timestamp: number;
+            type: string;
+          }
+        | Record<string, unknown>
+      >;
+      participantFrames: Record<
+        string,
+        {
+          participantId: number;
+          totalGold?: number;
+        }
+      >;
+      timestamp: number;
+    }[];
+    gameId: number;
+    participants: Array<{ participantId: number; puuid: string }>;
+  };
+  metadata: {
+    matchId: string;
+  };
+};
+
 const EMPTY_QUEUE_STATS: QueueStats = {
   tier: "UNRANKED",
   rank: null,
@@ -441,5 +471,21 @@ export async function fetchMatchById(
     headers,
     notFoundMessage: `Partida ${matchId} no encontrada.`,
     requestLabel: `Match-V5 detalle ${matchId}`,
+  });
+}
+
+export async function fetchMatchTimelineById(
+  matchId: string,
+  platform: string,
+  apiKey: string,
+): Promise<RiotMatchTimelineDto> {
+  const headers = { "X-Riot-Token": apiKey };
+  const regionalRouting = regionalRoutingFromPlatform(platform);
+  const timelineUrl = `https://${regionalRouting}.api.riotgames.com/lol/match/v5/matches/${encodeURIComponent(matchId)}/timeline`;
+
+  return fetchRiotJson<RiotMatchTimelineDto>(timelineUrl, {
+    headers,
+    notFoundMessage: `Timeline ${matchId} no encontrada.`,
+    requestLabel: `Match-V5 timeline ${matchId}`,
   });
 }

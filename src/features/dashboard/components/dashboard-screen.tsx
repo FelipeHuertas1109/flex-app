@@ -10,10 +10,12 @@ import { CreateGroupForm } from "@/features/groups/components/create-group-form"
 import type { LeaderboardSort, LeaderboardSortDirection } from "@/features/dashboard/types";
 
 export async function DashboardScreen({
+  mainOnly,
   queue,
   sort,
   sortDirection,
 }: {
+  mainOnly: boolean;
   queue: "flex" | "solo-duo";
   sort: LeaderboardSort;
   sortDirection: LeaderboardSortDirection;
@@ -59,7 +61,13 @@ export async function DashboardScreen({
 
   return (
     <AppShell user={shellUser}>
-      <DashboardView queue={queue} snapshot={snapshot} sort={sort} sortDirection={sortDirection} />
+      <DashboardView
+        mainOnly={mainOnly}
+        queue={queue}
+        snapshot={snapshot}
+        sort={sort}
+        sortDirection={sortDirection}
+      />
     </AppShell>
   );
 }
