@@ -8,10 +8,11 @@ import { LogoutIcon } from "@/components/icons/logout-icon";
 import type { ShellUser } from "@/lib/auth/shell-user";
 import { cn } from "@/lib/utils";
 
-type NavIconName = "grid" | "mail" | "key";
+type NavIconName = "grid" | "mail" | "key" | "map";
 
 const navItems: { label: string; icon: NavIconName; href: string }[] = [
   { href: "/", label: "Dashboard", icon: "grid" },
+  { href: "/mapa", label: "Team Builder", icon: "map" },
   { href: "/invitaciones", label: "Invitaciones", icon: "mail" },
   { href: "/key", label: "RIOT KEY", icon: "key" },
 ];
@@ -43,6 +44,16 @@ function SidebarGlyph({ active, type }: { active: boolean; type: NavIconName }) 
         <rect height="7" rx="1.4" width="7" x="13.5" y="3.5" opacity="0.78" />
         <rect height="7" rx="1.4" width="7" x="3.5" y="13.5" opacity="0.78" />
         <rect height="7" rx="1.4" width="7" x="13.5" y="13.5" />
+      </svg>
+    );
+  }
+
+  if (type === "map") {
+    return (
+      <svg {...common}>
+        <path d="M9 4.5 3.5 6.75v13L9 17.5l6 2 5.5-2.25v-13L15 6.5l-6-2Z" />
+        <path d="M9 4.5v13" />
+        <path d="M15 6.5v13" />
       </svg>
     );
   }
