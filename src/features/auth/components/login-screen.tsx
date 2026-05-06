@@ -32,16 +32,20 @@ export function LoginScreen() {
 
       <div className="mx-auto flex min-h-[calc(100vh-3rem)] w-full max-w-7xl flex-col">
         <header className="flex items-center justify-between gap-4">
-          <Link className="group flex min-w-0 items-center gap-3" href="/">
-            <div className="relative flex size-12 shrink-0 items-center justify-center overflow-hidden rounded-xl border border-cyan-300/35 bg-[#071a33] text-lg font-black text-white shadow-xl shadow-cyan-500/20">
+          <Link className="group flex items-center" href="/">
+            <div className="relative z-10 flex size-12 shrink-0 items-center justify-center overflow-hidden rounded-xl border border-cyan-300/35 bg-[#071a33] text-lg font-black text-white shadow-xl shadow-cyan-500/20">
               <span className="absolute -left-3 -top-3 size-10 rounded-full bg-cyan-300/45 blur-xl" />
               <span className="absolute -right-4 bottom-0 size-10 rounded-full bg-violet-500/55 blur-xl" />
               <span className="absolute inset-0 bg-[linear-gradient(135deg,rgba(25,216,255,0.42),transparent_42%,rgba(124,60,255,0.42))]" />
               <span className="relative z-10 tracking-tight">FX</span>
             </div>
-            <div className="min-w-0">
-              <p className="truncate text-lg font-black tracking-tight text-white">Flex App</p>
-              <p className="truncate text-xs font-medium text-slate-300">Equipos, cuentas y rendimiento</p>
+            <div className="grid grid-cols-[0fr] opacity-0 transition-all duration-500 ease-out group-hover:grid-cols-[1fr] group-hover:opacity-100">
+              <div className="overflow-hidden">
+                <div className="-translate-x-full pl-3 transition-transform duration-500 ease-out group-hover:translate-x-0 whitespace-nowrap">
+                  <p className="text-lg font-black tracking-tight text-white">Flex App</p>
+                  <p className="text-xs font-medium text-slate-300">Equipos, cuentas y rendimiento</p>
+                </div>
+              </div>
             </div>
           </Link>
 
