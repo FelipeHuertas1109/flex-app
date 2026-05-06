@@ -20,9 +20,11 @@ type SyncCacheEntry = {
   inFlight: Promise<CachedSyncResponse> | null;
   lastCompletedAt: number;
   lastResult: SyncAllAccountsResult | null;
+  version: number;
 };
 
 const syncCache = new Map<string, SyncCacheEntry>();
+const syncListeners = new Map<string, Set<() => void>>();
 
 export function resolvedSyncIntervalMs(): number {
   const raw = process.env.NEXT_PUBLIC_DASHBOARD_RIOT_SYNC_MINUTES;
@@ -41,9 +43,32 @@ function getOrCreateEntry(groupId: string): SyncCacheEntry {
     inFlight: null,
     lastCompletedAt: 0,
     lastResult: null,
+    version: 0,
   };
   syncCache.set(groupId, entry);
   return entry;
+}
+
+function notifySyncListeners(groupId: string) {
+  const listeners = syncListeners.get(groupId);
+  listeners?.forEach((listener) => listener());
+}
+
+export function getGroupSyncVersion(groupId: string): number {
+  return getOrCreateEntry(groupId).version;
+}
+
+export function subscribeToGroupSync(groupId: string, listener: () => void) {
+  const listeners = syncListeners.get(groupId) ?? new Set<() => void>();
+  listeners.add(listener);
+  syncListeners.set(groupId, listeners);
+
+  return () => {
+    listeners.delete(listener);
+    if (listeners.size === 0) {
+      syncListeners.delete(groupId);
+    }
+  };
 }
 
 export async function runCachedGroupSync(
@@ -73,6 +98,8 @@ export async function runCachedGroupSync(
     .then((result) => {
       entry.lastCompletedAt = Date.now();
       entry.lastResult = result;
+      entry.version += 1;
+      notifySyncListeners(groupId);
       return {
         fromCache: false,
         result,

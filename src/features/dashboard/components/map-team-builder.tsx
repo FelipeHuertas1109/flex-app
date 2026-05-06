@@ -5,18 +5,28 @@ import type { GroupMember } from "@/features/dashboard/types";
 import { Panel } from "@/components/ui/panel";
 import { ChampionBuildPanel } from "@/features/teambuilder/components/champion-build-panel";
 import { SynergyPanel } from "@/features/teambuilder/components/synergy-panel";
+import {
+  championImageUrl,
+  clearCachedTeamBuilderState,
+  fetchCachedTeamBuilderChampions,
+  getCachedTeamBuilderState,
+  setCachedTeamBuilderAssignments,
+  setCachedTeamBuilderChampAssignments,
+  teamBuilderCacheKey,
+  type TeamBuilderAssignments,
+  type TeamBuilderChampAssignments,
+  type TeamBuilderChampionInfo,
+  type TeamBuilderRole,
+} from "@/features/teambuilder/lib/team-builder-cache";
 import { calcTeamSynergy } from "@/lib/lol/synergy";
 import type { TeamEntry } from "@/lib/lol/synergy";
 import type { LolRole } from "@/lib/lol/types";
 import { cn } from "@/lib/utils";
 
-const DDRAGON_BASE = `https://ddragon.leagueoflegends.com/cdn/16.9.1`;
-
-type Role = "top" | "jungle" | "mid" | "adc" | "support";
-type Assignments     = Partial<Record<Role, GroupMember>>;
-type ChampAssignments = Partial<Record<Role, ChampionInfo>>;
-
-type ChampionInfo = { id: string; name: string; tags: string[] };
+type Role = TeamBuilderRole;
+type Assignments = TeamBuilderAssignments;
+type ChampAssignments = TeamBuilderChampAssignments;
+type ChampionInfo = TeamBuilderChampionInfo;
 
 const ROLE_TAG_FILTER: Record<Role, string[]> = {
   top:     ["Fighter", "Tank"],
@@ -42,20 +52,7 @@ const ROLES: {
   { id: "support", label: "Support", abbr: "SUP", top: "79%", left: "80%", color: "text-cyan-300",    dot: "bg-cyan-400 shadow-cyan-400/60"      },
 ];
 
-let championsCache: ChampionInfo[] | null = null;
-async function fetchChampions(): Promise<ChampionInfo[]> {
-  if (championsCache) return championsCache;
-  const res  = await fetch(`${DDRAGON_BASE}/data/en_US/champion.json`);
-  const json = await res.json();
-  const list = Object.values(
-    json.data as Record<string, { id: string; name: string; tags: string[] }>,
-  ).map((c) => ({ id: c.id, name: c.name, tags: c.tags }));
-  list.sort((a, b) => a.name.localeCompare(b.name));
-  championsCache = list;
-  return list;
-}
-
-const champImg = (id: string) => `${DDRAGON_BASE}/img/champion/${id}.png`;
+const champImg = championImageUrl;
 
 // ─────────────────────────────────────────────────────────────────────────────
 
@@ -67,8 +64,10 @@ type PendingDrop = {
 };
 
 export function MapTeamBuilder({ members }: { members: GroupMember[] }) {
-  const [assignments, setAssignments]         = useState<Assignments>({});
-  const [champAssignments, setChampAssignments] = useState<ChampAssignments>({});
+  const cacheKey = useMemo(() => teamBuilderCacheKey(members.map((member) => member.id)), [members]);
+  const cachedState = useMemo(() => getCachedTeamBuilderState(cacheKey), [cacheKey]);
+  const [assignments, setAssignments] = useState<Assignments>(() => cachedState.assignments);
+  const [champAssignments, setChampAssignments] = useState<ChampAssignments>(() => cachedState.champAssignments);
   const [draggingId,  setDraggingId]  = useState<string | null>(null);
   const [dragOverRole, setDragOverRole] = useState<Role | null>(null);
   const [champions, setChampions]     = useState<ChampionInfo[]>([]);
@@ -78,8 +77,9 @@ export function MapTeamBuilder({ members }: { members: GroupMember[] }) {
   const [buildPanel, setBuildPanel]   = useState<{ champId: string; champName: string; role: Role } | null>(null);
   const [pendingDrop, setPendingDrop] = useState<PendingDrop | null>(null);
   const searchRef = useRef<HTMLInputElement>(null);
+  const memberById = useMemo(() => new Map(members.map((member) => [member.id, member])), [members]);
 
-  useEffect(() => { fetchChampions().then(setChampions); }, []);
+  useEffect(() => { fetchCachedTeamBuilderChampions().then(setChampions); }, []);
   useEffect(() => {
     if (pickingFor) { const t = setTimeout(() => searchRef.current?.focus(), 60); return () => clearTimeout(t); }
   }, [pickingFor]);
@@ -97,7 +97,6 @@ export function MapTeamBuilder({ members }: { members: GroupMember[] }) {
     return list;
   }, [champions, pickingFor, showAll, search]);
 
-  const assignedIds  = new Set(Object.values(assignments).map((m) => m.id));
   const filledCount  = Object.keys(assignments).length;
   const champsCount  = Object.keys(champAssignments).length;
 
@@ -125,14 +124,14 @@ export function MapTeamBuilder({ members }: { members: GroupMember[] }) {
     const member = members.find((m) => m.id === e.dataTransfer.getData("memberId"));
     if (!member) return;
     // Same slot — no-op
-    if (assignments[role]?.id === member.id) return;
+    if (assignments[role] === member.id) return;
     // Conflict: another player already in this role
-    const occupant = assignments[role];
-    if (occupant) {
+    const occupantId = assignments[role];
+    if (occupantId) {
       const incomingCurrentRole = (Object.keys(assignments) as Role[]).find(
-        (r) => assignments[r]?.id === member.id,
+        (r) => assignments[r] === member.id,
       ) ?? null;
-      setPendingDrop({ incomingId: member.id, targetRole: role, occupantId: occupant.id, incomingCurrentRole });
+      setPendingDrop({ incomingId: member.id, targetRole: role, occupantId, incomingCurrentRole });
       return;
     }
     applyMove(member.id, role);
@@ -141,8 +140,9 @@ export function MapTeamBuilder({ members }: { members: GroupMember[] }) {
   function applyMove(memberId: string, targetRole: Role) {
     setAssignments((prev) => {
       const next = { ...prev };
-      for (const r of Object.keys(next) as Role[]) { if (next[r]?.id === memberId) delete next[r]; }
-      next[targetRole] = members.find((m) => m.id === memberId)!;
+      for (const r of Object.keys(next) as Role[]) { if (next[r] === memberId) delete next[r]; }
+      next[targetRole] = memberId;
+      setCachedTeamBuilderAssignments(cacheKey, next);
       return next;
     });
   }
@@ -152,12 +152,13 @@ export function MapTeamBuilder({ members }: { members: GroupMember[] }) {
     const { incomingId, targetRole, occupantId, incomingCurrentRole } = pendingDrop;
     setAssignments((prev) => {
       const next = { ...prev };
-      next[targetRole] = members.find((m) => m.id === incomingId)!;
+      next[targetRole] = incomingId;
       if (incomingCurrentRole) {
-        next[incomingCurrentRole] = members.find((m) => m.id === occupantId)!;
+        next[incomingCurrentRole] = occupantId;
       } else {
-        for (const r of Object.keys(next) as Role[]) { if (next[r]?.id === occupantId && r !== targetRole) delete next[r]; }
+        for (const r of Object.keys(next) as Role[]) { if (next[r] === occupantId && r !== targetRole) delete next[r]; }
       }
+      setCachedTeamBuilderAssignments(cacheKey, next);
       return next;
     });
     setPendingDrop(null);
@@ -169,14 +170,16 @@ export function MapTeamBuilder({ members }: { members: GroupMember[] }) {
     setAssignments((prev) => {
       const next = { ...prev };
       for (const r of Object.keys(next) as Role[]) {
-        if (next[r]?.id === incomingId || next[r]?.id === occupantId) delete next[r];
+        if (next[r] === incomingId || next[r] === occupantId) delete next[r];
       }
-      next[targetRole] = members.find((m) => m.id === incomingId)!;
+      next[targetRole] = incomingId;
+      setCachedTeamBuilderAssignments(cacheKey, next);
       return next;
     });
     setChampAssignments((prev) => {
       const next = { ...prev };
       delete next[targetRole];
+      setCachedTeamBuilderChampAssignments(cacheKey, next);
       return next;
     });
     setPendingDrop(null);
@@ -189,21 +192,29 @@ export function MapTeamBuilder({ members }: { members: GroupMember[] }) {
 
   // ── Actions ───────────────────────────────────────────────────────────────
   function removePlayer(role: Role) {
-    setAssignments((p)      => { const n = { ...p }; delete n[role]; return n; });
-    setChampAssignments((p) => { const n = { ...p }; delete n[role]; return n; });
+    setAssignments((p)      => { const n = { ...p }; delete n[role]; setCachedTeamBuilderAssignments(cacheKey, n); return n; });
+    setChampAssignments((p) => { const n = { ...p }; delete n[role]; setCachedTeamBuilderChampAssignments(cacheKey, n); return n; });
   }
   function removeChamp(e: React.MouseEvent, role: Role) {
     e.stopPropagation();
-    setChampAssignments((p) => { const n = { ...p }; delete n[role]; return n; });
+    setChampAssignments((p) => { const n = { ...p }; delete n[role]; setCachedTeamBuilderChampAssignments(cacheKey, n); return n; });
   }
   function openPicker(role: Role) { setPickingFor(role); setSearch(""); setShowAll(false); }
   function closePicker()           { setPickingFor(null); setSearch(""); setShowAll(false); }
   function pickChamp(c: ChampionInfo) {
     if (!pickingFor) return;
-    setChampAssignments((p) => ({ ...p, [pickingFor]: c }));
+    setChampAssignments((p) => {
+      const next = { ...p, [pickingFor]: c };
+      setCachedTeamBuilderChampAssignments(cacheKey, next);
+      return next;
+    });
     closePicker();
   }
-  function clearAll() { setAssignments({}); setChampAssignments({}); }
+  function clearAll() {
+    clearCachedTeamBuilderState(cacheKey);
+    setAssignments({});
+    setChampAssignments({});
+  }
 
   // ─────────────────────────────────────────────────────────────────────────
   return (
@@ -236,7 +247,7 @@ export function MapTeamBuilder({ members }: { members: GroupMember[] }) {
             <div className="flex flex-col gap-1.5">
               {members.map((member) => {
                 const isDragging    = draggingId === member.id;
-                const roleAssigned  = ROLES.find((r) => assignments[r.id]?.id === member.id);
+                const roleAssigned  = ROLES.find((r) => assignments[r.id] === member.id);
                 return (
                   <div
                     key={member.id}
@@ -291,7 +302,8 @@ export function MapTeamBuilder({ members }: { members: GroupMember[] }) {
                 <div className="pointer-events-none absolute inset-0 select-none bg-black/15" />
 
                 {ROLES.map((role) => {
-                  const assigned = assignments[role.id];
+                  const assignedId = assignments[role.id];
+                  const assigned = assignedId ? memberById.get(assignedId) : null;
                   const champ    = champAssignments[role.id];
                   const isOver   = dragOverRole === role.id;
                   const isDraggingThis = assigned && draggingId === assigned.id;
@@ -377,7 +389,8 @@ export function MapTeamBuilder({ members }: { members: GroupMember[] }) {
             <p className="mb-3 text-[10px] font-black uppercase tracking-[0.12em] text-slate-500">Composición</p>
             <div className="flex flex-col gap-2">
               {ROLES.map((role) => {
-                const player = assignments[role.id];
+                const playerId = assignments[role.id];
+                const player = playerId ? memberById.get(playerId) : null;
                 const champ  = champAssignments[role.id];
                 return (
                   <div
@@ -477,7 +490,8 @@ export function MapTeamBuilder({ members }: { members: GroupMember[] }) {
                 <div className="flex gap-1.5 flex-wrap">
                   {ROLES.map((role) => {
                     const champ = champAssignments[role.id];
-                    const player = assignments[role.id];
+                    const playerId = assignments[role.id];
+                    const player = playerId ? memberById.get(playerId) : null;
                     if (!player) return null;
                     return (
                       <div key={role.id} className="flex flex-col items-center gap-0.5" title={`${role.label}: ${player.name}${champ ? ` — ${champ.name}` : ""}`}>

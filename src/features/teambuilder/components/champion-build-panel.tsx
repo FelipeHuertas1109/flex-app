@@ -24,14 +24,24 @@ export function ChampionBuildPanel({
   const [state, setState] = useState<State>({ status: "loading" });
 
   useEffect(() => {
-    setState({ status: "loading" });
+    let cancelled = false;
+    Promise.resolve().then(() => {
+      if (!cancelled) setState({ status: "loading" });
+    });
     fetch(`/api/champions/${encodeURIComponent(championId)}/build?role=${role}`)
       .then((r) => r.json())
       .then((json) => {
+        if (cancelled) return;
         if (json.ok) setState({ status: "ok", data: json.data });
         else setState({ status: "error", message: json.error ?? "Error desconocido" });
       })
-      .catch(() => setState({ status: "error", message: "Error de red al obtener la build." }));
+      .catch(() => {
+        if (!cancelled) setState({ status: "error", message: "Error de red al obtener la build." });
+      });
+
+    return () => {
+      cancelled = true;
+    };
   }, [championId, role]);
 
   return (

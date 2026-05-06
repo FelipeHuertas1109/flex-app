@@ -1,6 +1,6 @@
 "use client";
 
-import { useTransition } from "react";
+import { useSyncExternalStore, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import Swal from "sweetalert2";
 import { Button } from "@/components/ui/button";
@@ -38,12 +38,29 @@ function formatLastUpdated(value?: string | null) {
   });
 }
 
+function subscribeToHydrationStore() {
+  return () => {};
+}
+
+function getClientHydrationSnapshot() {
+  return true;
+}
+
+function getServerHydrationSnapshot() {
+  return false;
+}
+
 export function SyncAllAccountsButton({
   groupId,
   lastLiveGameCheckedAt,
   lastStatsSyncedAt,
 }: SyncAllAccountsButtonProps) {
   const router = useRouter();
+  const hasHydrated = useSyncExternalStore(
+    subscribeToHydrationStore,
+    getClientHydrationSnapshot,
+    getServerHydrationSnapshot,
+  );
   const [isPending, startTransition] = useTransition();
 
   function escapeHtml(value: string) {
@@ -125,7 +142,9 @@ export function SyncAllAccountsButton({
         {isPending ? "Sincronizando..." : "Sincronizar todo"}
       </Button>
       <p className="whitespace-nowrap text-right text-[11px] font-semibold leading-none text-slate-500">
-        Rangos: {formatLastUpdated(lastStatsSyncedAt)} · En vivo: {formatLastUpdated(lastLiveGameCheckedAt)}
+        {hasHydrated
+          ? `Rangos: ${formatLastUpdated(lastStatsSyncedAt)} · En vivo: ${formatLastUpdated(lastLiveGameCheckedAt)}`
+          : "Rangos: -- · En vivo: --"}
       </p>
     </div>
   );

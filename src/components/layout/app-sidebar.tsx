@@ -8,10 +8,11 @@ import { LogoutIcon } from "@/components/icons/logout-icon";
 import type { ShellUser } from "@/lib/auth/shell-user";
 import { cn } from "@/lib/utils";
 
-type NavIconName = "grid" | "mail" | "key" | "map";
+type NavIconName = "gamepad" | "grid" | "mail" | "key" | "map";
 
 const navItems: { label: string; icon: NavIconName; href: string }[] = [
   { href: "/", label: "Dashboard", icon: "grid" },
+  { href: "/en-partida", label: "En partida", icon: "gamepad" },
   { href: "/mapa", label: "Team Builder", icon: "map" },
   { href: "/invitaciones", label: "Invitaciones", icon: "mail" },
   { href: "/key", label: "RIOT KEY", icon: "key" },
@@ -54,6 +55,18 @@ function SidebarGlyph({ active, type }: { active: boolean; type: NavIconName }) 
         <path d="M9 4.5 3.5 6.75v13L9 17.5l6 2 5.5-2.25v-13L15 6.5l-6-2Z" />
         <path d="M9 4.5v13" />
         <path d="M15 6.5v13" />
+      </svg>
+    );
+  }
+
+  if (type === "gamepad") {
+    return (
+      <svg {...common}>
+        <path d="M6.5 8.25h11A3.75 3.75 0 0 1 21.15 12l.35 3.35a2.35 2.35 0 0 1-4.05 1.85l-1.7-1.7h-7.5l-1.7 1.7a2.35 2.35 0 0 1-4.05-1.85L2.85 12A3.75 3.75 0 0 1 6.5 8.25Z" />
+        <path d="M7.25 11.25v3" />
+        <path d="M5.75 12.75h3" />
+        <path d="M16.35 12.1h.02" />
+        <path d="M18.25 14h.02" />
       </svg>
     );
   }

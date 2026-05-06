@@ -31,6 +31,39 @@ type LeagueEntry = {
   losses: number;
 };
 
+export type RiotCurrentGameParticipant = {
+  bot: boolean;
+  championId: number;
+  perks?: {
+    perkIds?: number[];
+    perkStyle?: number;
+    perkSubStyle?: number;
+  };
+  profileIconId: number;
+  puuid: string;
+  riotId?: string;
+  spell1Id: number;
+  spell2Id: number;
+  teamId: number;
+};
+
+export type RiotCurrentGameInfo = {
+  bannedChampions?: {
+    championId: number;
+    pickTurn: number;
+    teamId: number;
+  }[];
+  gameId: number;
+  gameLength: number;
+  gameMode: string;
+  gameQueueConfigId: number;
+  gameStartTime: number;
+  gameType: string;
+  mapId: number;
+  participants: RiotCurrentGameParticipant[];
+  platformId: string;
+};
+
 const EMPTY_QUEUE_STATS: QueueStats = {
   tier: "UNRANKED",
   rank: null,
@@ -213,6 +246,27 @@ export async function fetchLiveGameByPuuid(
   } catch (error) {
     if (error instanceof RiotApiRequestError && error.status === 404) {
       return false;
+    }
+    throw error;
+  }
+}
+
+export async function fetchLiveGameDetailsByPuuid(
+  puuid: string,
+  platform: string,
+  apiKey: string,
+): Promise<RiotCurrentGameInfo | null> {
+  const headers = { "X-Riot-Token": apiKey };
+  const spectatorUrl = `https://${platform}.api.riotgames.com/lol/spectator/v5/active-games/by-summoner/${puuid}`;
+  try {
+    return await fetchRiotJson<RiotCurrentGameInfo>(spectatorUrl, {
+      headers,
+      notFoundMessage: "LIVE_GAME_NOT_FOUND",
+      requestLabel: `Spectator API en ${platform}`,
+    });
+  } catch (error) {
+    if (error instanceof RiotApiRequestError && error.status === 404) {
+      return null;
     }
     throw error;
   }

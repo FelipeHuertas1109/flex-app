@@ -1,9 +1,11 @@
 const VERSIONS_URL = "https://ddragon.leagueoflegends.com/api/versions.json";
 
 type ItemData = { name: string; image: { full: string } };
+type ChampionData = { id: string; key: string; name: string; image: { full: string } };
 type RuneData = { id: number; key: string; name: string; icon: string; slots: { runes: { id: number; key: string; name: string; icon: string }[] }[] };
 
 let cachedVersion: string | null = null;
+let championsByKeyCache: Map<number, { id: string; name: string; imageUrl: string }> | null = null;
 let itemsCache: Map<string, { name: string; imageUrl: string }> | null = null;
 let runesCache: Map<number, { name: string; imageUrl: string; isKeystone: boolean }> | null = null;
 
@@ -31,6 +33,27 @@ export async function getItemsMap(): Promise<Map<string, { name: string; imageUr
     });
   }
   return itemsCache;
+}
+
+export async function getChampionsByKeyMap(): Promise<Map<number, { id: string; name: string; imageUrl: string }>> {
+  if (championsByKeyCache) return championsByKeyCache;
+  const version = await getLatestVersion();
+  const res = await fetch(
+    `https://ddragon.leagueoflegends.com/cdn/${version}/data/en_US/champion.json`,
+    { next: { revalidate: 86400 } },
+  );
+  const json = await res.json();
+  championsByKeyCache = new Map<number, { id: string; name: string; imageUrl: string }>();
+  for (const champion of Object.values<ChampionData>(json.data)) {
+    const key = Number(champion.key);
+    if (!Number.isFinite(key)) continue;
+    championsByKeyCache.set(key, {
+      id: champion.id,
+      name: champion.name,
+      imageUrl: championImageUrl(champion.id, version),
+    });
+  }
+  return championsByKeyCache;
 }
 
 export async function getRunesMap(): Promise<Map<number, { name: string; imageUrl: string; isKeystone: boolean }>> {
