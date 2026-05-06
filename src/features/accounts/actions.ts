@@ -25,13 +25,23 @@ function normalizeRoutingPlatform(value: FormDataEntryValue | null) {
   return VALID_ROUTING_PLATFORMS.has(platform) ? platform : null;
 }
 
+function normalizeSavedRoutingPlatform(value: string | null | undefined) {
+  const platform = value?.trim().toLowerCase() ?? "";
+  return VALID_ROUTING_PLATFORMS.has(platform) ? platform : null;
+}
+
 async function syncRiotAccountById(
   riotAccountId: string,
   gameName: string,
   tagLine: string,
   routingPlatform?: string | null,
 ) {
-  const stats = await fetchRiotAccountStats(gameName, tagLine, routingPlatform);
+  const savedRoutingPlatform = normalizeSavedRoutingPlatform(routingPlatform);
+  if (!savedRoutingPlatform) {
+    return { ok: false as const, error: "Cuenta sin region definida." };
+  }
+
+  const stats = await fetchRiotAccountStats(gameName, tagLine, savedRoutingPlatform);
   if (!stats) {
     return { ok: false as const, error: "No se pudo consultar Riot API." };
   }
@@ -59,7 +69,6 @@ async function syncRiotAccountById(
       solo_total_games: stats.soloDuo.totalGames,
       is_in_game: stats.isInGame,
       live_game_checked_at: new Date().toISOString(),
-      routing_platform: stats.routingPlatform ?? null,
       last_synced_at: new Date().toISOString(),
     })
     .eq("id", riotAccountId);
@@ -254,31 +263,52 @@ export async function syncAllAccounts(groupId: string) {
       : account.riot_accounts;
 
     if (!riotAccount?.game_name || !riotAccount?.tag_line) {
-      return false;
+      return { ok: false, label: "Cuenta sin Riot ID" };
     }
 
-    const syncResult = await syncRiotAccountById(
-      account.riot_account_id,
-      riotAccount.game_name,
-      riotAccount.tag_line,
-      riotAccount.routing_platform,
-    );
+    const label = `${riotAccount.game_name}#${riotAccount.tag_line}`;
+    try {
+      const syncResult = await syncRiotAccountById(
+        account.riot_account_id,
+        riotAccount.game_name,
+        riotAccount.tag_line,
+        riotAccount.routing_platform,
+      );
 
-    return syncResult.ok;
+      return { ok: syncResult.ok, label, error: syncResult.ok ? undefined : syncResult.error };
+    } catch (error) {
+      console.error(`Sync fallido para ${label}:`, error);
+      return { ok: false, label, error: "Error inesperado durante la sincronizacion" };
+    }
   };
 
-  const results = await runWithConcurrency(accounts, 4, syncOneAccount);
-  const synced = results.filter(Boolean).length;
+  const results = await runWithConcurrency(accounts, 4, syncOneAccount, (account) => {
+    const riotAccount = Array.isArray(account.riot_accounts)
+      ? account.riot_accounts[0]
+      : account.riot_accounts;
+    const label = riotAccount?.game_name && riotAccount?.tag_line
+      ? `${riotAccount.game_name}#${riotAccount.tag_line}`
+      : "Cuenta sin Riot ID";
+    return { ok: false, label, error: "Error inesperado durante la sincronizacion" };
+  });
+  const synced = results.filter((result) => result.ok).length;
   const failed = results.length - synced;
+  const failedAccounts = results
+    .filter((result) => !result.ok)
+    .map((result) => ({
+      label: result.label,
+      error: result.error ?? "No se pudo sincronizar",
+    }));
 
   revalidatePath("/");
-  return { success: true, synced, failed };
+  return { success: true, synced, failed, failedAccounts };
 }
 
 async function runWithConcurrency<T, R>(
   items: T[],
   limit: number,
   task: (item: T) => Promise<R>,
+  onError: (item: T, error: unknown) => R,
 ): Promise<R[]> {
   const results: R[] = [];
   let nextIndex = 0;
@@ -287,7 +317,12 @@ async function runWithConcurrency<T, R>(
     while (nextIndex < items.length) {
       const index = nextIndex;
       nextIndex += 1;
-      results[index] = await task(items[index]);
+      try {
+        results[index] = await task(items[index]);
+      } catch (error) {
+        console.error("Error en tarea concurrente:", error);
+        results[index] = onError(items[index], error);
+      }
     }
   }
 

@@ -17,22 +17,3 @@ export function routingPlatformToRegionLabel(platform: string | null | undefined
   const normalized = platform.trim().toLowerCase();
   return PLATFORM_TO_REGION_LABEL[normalized] ?? platform.toUpperCase();
 }
-
-/** Si el tag coincide con region LoL (LAN, LAS, etc.), mostrarlo como fallback. */
-export function inferRegionFromTagLine(tagLine: string): string {
-  const t = tagLine.trim().toUpperCase();
-  const byTag: Record<string, string> = {
-    LAS: "LAS",
-    LAN: "LAN",
-    BR: "BR",
-    NA: "NA",
-    EUW: "EUW",
-    EUNE: "EUNE",
-    KR: "KR",
-    JP: "JP",
-    OCE: "OCE",
-    TR: "TR",
-    RU: "RU",
-  };
-  return byTag[t] ?? "";
-}

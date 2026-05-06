@@ -1,5 +1,5 @@
 import { createClient } from "@/lib/supabase/server";
-import { inferRegionFromTagLine, routingPlatformToRegionLabel } from "@/lib/riot/routing-platform";
+import { routingPlatformToRegionLabel } from "@/lib/riot/routing-platform";
 import {
   DashboardSnapshot,
   GroupInvite,
@@ -144,15 +144,13 @@ export async function getDashboardSnapshot(viewerId?: string): Promise<Dashboard
       return null;
     }
 
-    const fromPlatform = routingPlatformToRegionLabel(riot.routing_platform);
-    const fromTag = inferRegionFromTagLine(riot.tag_line ?? "");
     return {
       id: acc.id,
       customName: acc.custom_name || null,
       isShared: Boolean(acc.is_shared),
       summonerName: riot.game_name,
       tagLine: riot.tag_line,
-      region: fromPlatform || fromTag,
+      region: routingPlatformToRegionLabel(riot.routing_platform) || "Sin region",
       accountUser: acc.credential_user ?? null,
       accountPsw: acc.credential_psw ?? null,
       isInGame: Boolean(riot.is_in_game),

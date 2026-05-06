@@ -20,34 +20,6 @@ export interface QueueStats {
 
 const REGION_ROUTING = "americas"; // Para Account-V1
 
-const TAG_TO_PLATFORM: Record<string, string> = {
-  LAS: "la2",
-  LAN: "la1",
-  BR: "br1",
-  NA: "na1",
-  EUW: "euw1",
-  EUNE: "eun1",
-  KR: "kr",
-  JP: "jp1",
-  OCE: "oc1",
-  RU: "ru",
-  TR: "tr1",
-};
-
-const PLATFORM_FALLBACK_ORDER = [
-  "la2",
-  "la1",
-  "br1",
-  "na1",
-  "euw1",
-  "eun1",
-  "kr",
-  "jp1",
-  "oc1",
-  "tr1",
-  "ru",
-];
-
 type LeagueEntry = {
   queueType: string;
   tier: string;
@@ -80,17 +52,6 @@ function toQueueStats(entry: LeagueEntry | undefined): QueueStats {
   };
 }
 
-function getPlatformCandidates(tagLine: string) {
-  const normalizedTag = tagLine.toUpperCase();
-  const inferred = TAG_TO_PLATFORM[normalizedTag];
-
-  if (!inferred) {
-    return PLATFORM_FALLBACK_ORDER;
-  }
-
-  return [inferred, ...PLATFORM_FALLBACK_ORDER.filter((platform) => platform !== inferred)];
-}
-
 async function fetchIsInGame(
   puuid: string,
   platform: string,
@@ -105,10 +66,24 @@ async function fetchIsInGame(
   throw new Error(`Spectator API error: ${spectatorRes.status}`);
 }
 
+async function fetchSummonerExists(
+  puuid: string,
+  platform: string,
+  headers: { "X-Riot-Token": string },
+): Promise<boolean> {
+  const summonerUrl = `https://${platform}.api.riotgames.com/lol/summoner/v4/summoners/by-puuid/${puuid}`;
+  const summonerRes = await fetch(summonerUrl, { headers });
+
+  if (summonerRes.ok) return true;
+  if (summonerRes.status === 404) return false;
+
+  throw new Error(`Summoner API error: ${summonerRes.status}`);
+}
+
 export async function fetchRiotAccountStats(
   gameName: string,
   tagLine: string,
-  platform?: string | null
+  platform: string,
 ): Promise<AccountStats | null> {
   const apiKey = process.env.RIOT_API_KEY;
   if (!apiKey) {
@@ -127,16 +102,20 @@ export async function fetchRiotAccountStats(
     const accountData = await accountRes.json();
     const puuid = accountData.puuid;
 
-    const normalizedPlatform = platform?.trim().toLowerCase();
-    const inferredCandidates = getPlatformCandidates(tagLine);
-    const platformCandidates = normalizedPlatform
-      ? [normalizedPlatform, ...inferredCandidates.filter((candidate) => candidate !== normalizedPlatform)]
-      : inferredCandidates;
+    const normalizedPlatform = platform.trim().toLowerCase();
+    const platformCandidates = [normalizedPlatform];
 
     let bestNonEmpty: { entries: LeagueEntry[]; platform: string } | null = null;
     let firstReachablePlatform: string | null = null;
 
     for (const candidate of platformCandidates) {
+      const summonerExists = await fetchSummonerExists(puuid, candidate, headers);
+      if (!summonerExists) {
+        continue;
+      }
+
+      firstReachablePlatform ??= candidate;
+
       const leagueUrl = `https://${candidate}.api.riotgames.com/lol/league/v4/entries/by-puuid/${puuid}`;
       const leagueRes = await fetch(leagueUrl, { headers });
 
@@ -148,7 +127,6 @@ export async function fetchRiotAccountStats(
       }
 
       const entries: LeagueEntry[] = await leagueRes.json();
-      firstReachablePlatform ??= candidate;
       const isInGame = await fetchIsInGame(puuid, candidate, headers).catch((error) => {
         console.warn(`No se pudo consultar partida en vivo para ${gameName}#${tagLine} en ${candidate}:`, error);
         return false;
@@ -180,6 +158,10 @@ export async function fetchRiotAccountStats(
         soloDuo: EMPTY_QUEUE_STATS,
         routingPlatform: bestNonEmpty.platform,
       };
+    }
+
+    if (normalizedPlatform && !firstReachablePlatform) {
+      throw new Error(`Riot ID no existe en la region guardada (${normalizedPlatform})`);
     }
 
     return {
