@@ -65,6 +65,13 @@ export type MatchHistoryParticipant = {
   opScore: number;
   participantId: number;
   puuid: string;
+  rankSnapshot: {
+    division: string | null;
+    lp: number | null;
+    queue: string | null;
+    snapshotAt: string | null;
+    tier: string;
+  } | null;
   riotId: string;
   selected: boolean;
   summonerSpells: {

@@ -436,7 +436,7 @@ function ExpandedMatchDetails({ match }: { match: MatchHistoryItem }) {
                   key={participant.puuid || participant.participantId}
                   participant={participant}
                   rank={rankMap.get(participant.puuid) ?? 10}
-                  tier={null}
+                  tier={participant.rankSnapshot}
                 />
               ))}
             </div>
@@ -476,7 +476,9 @@ function TierIcon({ rank }: { rank: ParticipantRankInfo | null }) {
             width={112}
           />
         ) : (
-          <div className="size-full rounded border border-white/8 bg-white/5" />
+          <div className="flex size-full items-center justify-center rounded border border-white/8 bg-white/5 text-[10px] font-black text-slate-500">
+            {rank ? "UNR" : ""}
+          </div>
         )}
       </div>
       {rank?.division ? (

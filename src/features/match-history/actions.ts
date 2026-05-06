@@ -73,6 +73,7 @@ type AuthorizedAccountResult =
     };
 
 type MatchHistoryPreviewEntry = Extract<MatchHistoryPreviewResult, { error: null }>["entries"][number];
+type RankSnapshot = NonNullable<MatchHistoryParticipant["rankSnapshot"]>;
 
 function normalizeJoinedRow<T>(value: T | T[] | null | undefined) {
   return Array.isArray(value) ? value[0] : value;
@@ -146,6 +147,57 @@ function participantKda(participant: RiotMatchParticipantDto) {
   const deaths = participant.deaths || 0;
   if (deaths === 0) return "Perfect";
   return ((participant.kills + participant.assists) / deaths).toFixed(2);
+}
+
+function rankQueueForQueueId(queueId: number) {
+  return queueId === QUEUE_IDS.flex ? "RANKED_FLEX_SR" : "RANKED_SOLO_5x5";
+}
+
+function rankSnapshotFromStats(
+  stats: Awaited<ReturnType<typeof fetchLeagueStatsByPuuid>>,
+  queueId: number,
+  snapshotAt: string,
+): RankSnapshot {
+  const queue = rankQueueForQueueId(queueId);
+  const selected = queueId === QUEUE_IDS.flex ? stats.flex : stats.soloDuo;
+
+  return {
+    division: selected.rank,
+    lp: selected.lp,
+    queue,
+    snapshotAt,
+    tier: selected.tier ?? "UNRANKED",
+  };
+}
+
+async function fetchRankSnapshotsByPuuid(
+  puuids: string[],
+  platform: string,
+  apiKey: string,
+  queueId: number,
+): Promise<Map<string, RankSnapshot>> {
+  const uniquePuuids = [...new Set(puuids.filter(Boolean))];
+  const snapshotAt = new Date().toISOString();
+  const rows = await runWithConcurrency(uniquePuuids, 3, async (puuid) => {
+    try {
+      const stats = await fetchLeagueStatsByPuuid(puuid, platform, apiKey);
+      return { puuid, snapshot: rankSnapshotFromStats(stats, queueId, snapshotAt) };
+    } catch (error) {
+      console.error("fetchRankSnapshotsByPuuid:", error);
+      return {
+        puuid,
+        snapshot: {
+          division: null,
+          lp: 0,
+          queue: rankQueueForQueueId(queueId),
+          snapshotAt,
+          tier: "UNRANKED",
+        },
+      };
+    }
+  });
+
+  return new Map(rows.map((row) => [row.puuid, row.snapshot]));
 }
 
 function riotId(participant: RiotMatchParticipantDto) {
@@ -295,6 +347,7 @@ function toHistoryItem(
       opScore: scores.get(item.participantId) ?? 0,
       participantId: item.participantId,
       puuid: item.puuid,
+      rankSnapshot: null,
       riotId: riotId(item),
       selected: item.puuid === participant.puuid,
       summonerSpells: participantSpells(item, summonerSpellsMap),
@@ -427,7 +480,10 @@ export async function getCachedMatchHistory(
   }
 }
 
-export async function syncSelectedMatchHistory(groupAccountId: string, queue: QueueFilter = "soloq"): Promise<MatchHistoryResult> {
+async function syncSelectedMatchHistoryInternal(
+  groupAccountId: string,
+  queue: QueueFilter = "soloq",
+): Promise<MatchHistoryResult> {
   const authorized = await getAuthorizedAccount(groupAccountId);
   if (authorized.error !== null) return { error: authorized.error };
 
@@ -488,7 +544,9 @@ export async function syncSelectedMatchHistory(groupAccountId: string, queue: Qu
         3,
         async (matchId) => fetchMatchById(matchId, platform, riotApiKey.apiKey!),
       );
-      await upsertMatchesToDb(newRiotMatches, riotAccount.id, puuid, champions, itemsMap, summonerSpellsMap, platform, admin);
+      const participantPuuids = newRiotMatches.flatMap((match) => match.info.participants.map((participant) => participant.puuid));
+      const rankSnapshots = await fetchRankSnapshotsByPuuid(participantPuuids, platform, riotApiKey.apiKey, QUEUE_IDS[queue]);
+      await upsertMatchesToDb(newRiotMatches, riotAccount.id, puuid, champions, itemsMap, summonerSpellsMap, platform, admin, rankSnapshots);
     }
 
     const history = await readMatchHistoryFromDb(riotAccount.id, QUEUE_IDS[queue], puuid, admin);
@@ -514,6 +572,10 @@ export async function syncSelectedMatchHistory(groupAccountId: string, queue: Qu
           : "No se pudo actualizar el historial de partidas.",
     };
   }
+}
+
+export async function syncSelectedMatchHistory(groupAccountId: string, queue: QueueFilter = "soloq"): Promise<MatchHistoryResult> {
+  return syncSelectedMatchHistoryInternal(groupAccountId, queue);
 }
 
 export async function getMatchHistory(groupAccountId: string, queue: QueueFilter = "soloq"): Promise<MatchHistoryResult> {
@@ -590,6 +652,7 @@ async function upsertMatchesToDb(
   summonerSpellsMap: Map<number, { name: string; imageUrl: string }>,
   platform: string,
   admin: AdminClient,
+  rankSnapshots: Map<string, RankSnapshot>,
 ): Promise<void> {
   const matchRows = [];
   const participantRows = [];
@@ -659,17 +722,24 @@ async function upsertMatchesToDb(
         lane: p.lane,
         kda: p.kda,
         items: p.items,
+        rank_division: rankSnapshots.get(p.puuid)?.division ?? null,
+        rank_lp: rankSnapshots.get(p.puuid)?.lp ?? null,
+        rank_queue: rankSnapshots.get(p.puuid)?.queue ?? rankQueueForQueueId(queueId),
+        rank_snapshot_at: rankSnapshots.get(p.puuid)?.snapshotAt ?? null,
+        rank_tier: rankSnapshots.get(p.puuid)?.tier ?? "UNRANKED",
         summoner_spells: p.summonerSpells,
       })),
     ));
   }
 
   if (matchRows.length > 0) {
-    await admin.from("matches").upsert(matchRows, { onConflict: "riot_account_id,match_id", ignoreDuplicates: true });
+    const { error } = await admin.from("matches").upsert(matchRows, { onConflict: "riot_account_id,match_id", ignoreDuplicates: true });
+    if (error) throw error;
   }
 
   if (participantRows.length > 0) {
-    await admin.from("match_participants").upsert(participantRows, { onConflict: "match_id,puuid", ignoreDuplicates: true });
+    const { error } = await admin.from("match_participants").upsert(participantRows, { onConflict: "match_id,puuid", ignoreDuplicates: true });
+    if (error) throw error;
   }
 }
 
@@ -730,6 +800,15 @@ async function readMatchHistoryFromDb(
           opScore: p.op_score ?? 0,
           participantId: 0,
           puuid: p.puuid ?? "",
+          rankSnapshot: p.rank_tier
+            ? {
+                division: p.rank_division ?? null,
+                lp: p.rank_lp ?? null,
+                queue: p.rank_queue ?? null,
+                snapshotAt: p.rank_snapshot_at ?? null,
+                tier: p.rank_tier,
+              }
+            : null,
           riotId: p.riot_id ?? "",
           selected: p.puuid === selectedPuuid,
           summonerSpells: (p.summoner_spells as MatchHistoryParticipant["summonerSpells"]) ?? [],
