@@ -3,7 +3,7 @@
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { getStoredRiotApiKeyRecord } from "@/lib/riot/api-key";
-import { fetchRiotAccountStats } from "@/lib/riot/client";
+import { fetchRiotAccountStats, RiotApiRequestError } from "@/lib/riot/client";
 import { cleanRiotIdPart } from "@/lib/riot/format";
 import { revalidatePath } from "next/cache";
 
@@ -43,9 +43,15 @@ async function syncRiotAccountById(
     return { ok: false as const, error: "Cuenta sin region definida." };
   }
 
-  const stats = await fetchRiotAccountStats(gameName, tagLine, savedRoutingPlatform, apiKey);
-  if (!stats) {
-    return { ok: false as const, error: "No se pudo consultar Riot API." };
+  let stats;
+  try {
+    stats = await fetchRiotAccountStats(gameName, tagLine, savedRoutingPlatform, apiKey);
+  } catch (error) {
+    console.error(`Error consultando Riot API para ${gameName}#${tagLine}:`, error);
+    return {
+      ok: false as const,
+      error: error instanceof RiotApiRequestError ? error.message : "No se pudo consultar Riot API.",
+    };
   }
 
   let adminSupabase;
@@ -72,6 +78,7 @@ async function syncRiotAccountById(
       is_in_game: stats.isInGame,
       live_game_checked_at: new Date().toISOString(),
       last_synced_at: new Date().toISOString(),
+      routing_platform: stats.routingPlatform ?? savedRoutingPlatform,
     })
     .eq("id", riotAccountId);
 
@@ -298,7 +305,7 @@ export async function syncAllAccounts(groupId: string) {
     }
   };
 
-  const results = await runWithConcurrency(accounts, 4, syncOneAccount, (account) => {
+  const results = await runWithConcurrency(accounts, 2, syncOneAccount, (account) => {
     const riotAccount = Array.isArray(account.riot_accounts)
       ? account.riot_accounts[0]
       : account.riot_accounts;
