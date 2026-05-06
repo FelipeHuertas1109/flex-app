@@ -23,6 +23,8 @@ export type LeagueAccount = {
   /** Texto guardado (modal: etiqueta Psw). */
   accountPsw: string | null;
   isInGame: boolean;
+  lastLiveGameCheckedAt: string | null;
+  lastStatsSyncedAt: string | null;
   isMain: boolean;
   routingPlatform: string | null;
   flex: {

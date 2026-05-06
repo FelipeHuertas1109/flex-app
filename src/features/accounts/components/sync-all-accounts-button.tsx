@@ -9,9 +9,40 @@ import { RECENT_SYNC_CACHE_MS, runCachedGroupSync } from "@/features/accounts/li
 
 type SyncAllAccountsButtonProps = {
   groupId: string;
+  lastLiveGameCheckedAt?: string | null;
+  lastStatsSyncedAt?: string | null;
 };
 
-export function SyncAllAccountsButton({ groupId }: SyncAllAccountsButtonProps) {
+function formatLastUpdated(value?: string | null) {
+  if (!value) return "sin datos";
+
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return "sin datos";
+
+  const diffMs = Date.now() - date.getTime();
+  if (diffMs < 0) return "ahora";
+
+  const diffSeconds = Math.floor(diffMs / 1000);
+  if (diffSeconds < 10) return "ahora";
+  if (diffSeconds < 60) return `hace ${diffSeconds}s`;
+
+  const diffMinutes = Math.floor(diffSeconds / 60);
+  if (diffMinutes < 60) return `hace ${diffMinutes} min`;
+
+  const diffHours = Math.floor(diffMinutes / 60);
+  if (diffHours < 24) return `hace ${diffHours} h`;
+
+  return date.toLocaleDateString("es-CO", {
+    day: "2-digit",
+    month: "short",
+  });
+}
+
+export function SyncAllAccountsButton({
+  groupId,
+  lastLiveGameCheckedAt,
+  lastStatsSyncedAt,
+}: SyncAllAccountsButtonProps) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
 
@@ -89,10 +120,13 @@ export function SyncAllAccountsButton({ groupId }: SyncAllAccountsButtonProps) {
   };
 
   return (
-    <div className="flex flex-col items-end gap-1">
-      <Button className="h-8 px-3 text-xs" variant="secondary" onClick={handleSyncAll} disabled={isPending}>
+    <div className="flex flex-col items-end gap-1.5">
+      <Button className="h-9 min-w-[8.5rem] whitespace-nowrap px-4 text-xs" variant="secondary" onClick={handleSyncAll} disabled={isPending}>
         {isPending ? "Sincronizando..." : "Sincronizar todo"}
       </Button>
+      <p className="whitespace-nowrap text-right text-[11px] font-semibold leading-none text-slate-500">
+        Rangos: {formatLastUpdated(lastStatsSyncedAt)} · En vivo: {formatLastUpdated(lastLiveGameCheckedAt)}
+      </p>
     </div>
   );
 }

@@ -3,7 +3,7 @@
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { getStoredRiotApiKeyRecord } from "@/lib/riot/api-key";
-import { fetchLiveGameByPuuid, fetchLeagueStatsByPuuid, fetchRiotAccountByRiotId, fetchRiotAccountByPuuid, RiotApiRequestError } from "@/lib/riot/client";
+import { fetchLiveGameByPuuid, fetchLeagueStatsByPuuid, fetchRiotAccountByRiotId, RiotApiRequestError } from "@/lib/riot/client";
 import { cleanRiotIdPart } from "@/lib/riot/format";
 import { revalidatePath } from "next/cache";
 
@@ -61,13 +61,14 @@ async function syncRiotAccountById(
   const ONE_MINUTE = 60 * 1000;
   
   // Limites de actualizacion
-  const LIVE_GAME_THRESHOLD = (isManual ? 5 : 15) * ONE_MINUTE; // 5 minutos vivo manual, 15m auto
-  const STATS_THRESHOLD = (isManual ? 10 : 15) * ONE_MINUTE; // 10m manual, 15m auto
+  const LIVE_GAME_THRESHOLD = isManual ? 20 * 1000 : 5 * ONE_MINUTE;
+  const STATS_THRESHOLD = isManual ? ONE_MINUTE : 10 * ONE_MINUTE;
 
   let currentPuuid = riotAccount.puuid;
   let currentGameName = riotAccount.game_name;
   let currentTagLine = riotAccount.tag_line;
-  const updates: Record<string, any> = {};
+  const updates: Record<string, boolean | number | string | null> = {};
+  const syncIssues = new Set<string>();
 
   const needsNameSync = !currentPuuid;
 
@@ -113,6 +114,7 @@ async function syncRiotAccountById(
       updates.last_synced_at = now.toISOString();
     } catch (error) {
       console.error(`Error League API para ${currentGameName}#${currentTagLine}:`, error);
+      syncIssues.add(error instanceof RiotApiRequestError ? error.message : "No se pudieron actualizar los rangos.");
     }
   }
 
@@ -125,6 +127,7 @@ async function syncRiotAccountById(
       updates.live_game_checked_at = now.toISOString();
     } catch (error) {
       console.error(`Error Spectator API para ${currentGameName}#${currentTagLine}:`, error);
+      syncIssues.add(error instanceof RiotApiRequestError ? error.message : "No se pudo revisar la partida en vivo.");
     }
   }
 
@@ -138,6 +141,10 @@ async function syncRiotAccountById(
       console.error("Error sincronizando riot_accounts en BD:", error);
       return { ok: false as const, error: "No se pudo guardar la sincronizacion parcial o total." };
     }
+  }
+
+  if (syncIssues.size > 0) {
+    return { ok: false as const, error: [...syncIssues].join(" ") };
   }
 
   return { ok: true as const };

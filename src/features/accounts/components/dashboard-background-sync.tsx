@@ -3,7 +3,6 @@
 import { useRouter } from "next/navigation";
 import { useEffect, useRef } from "react";
 import {
-  FIRST_SYNC_DELAY_MS,
   resolvedSyncIntervalMs,
   runCachedGroupSync,
 } from "@/features/accounts/lib/sync-all-cache";
@@ -12,7 +11,7 @@ import {
  * Mientras el usuario mantiene el dashboard abierto, llama periodicamente a
  * syncAllAccounts y refresca datos solo cuando hubo una sincronizacion real.
  *
- * Opcional en `.env.local`: NEXT_PUBLIC_DASHBOARD_RIOT_SYNC_MINUTES=15
+ * Opcional en `.env.local`: NEXT_PUBLIC_DASHBOARD_RIOT_SYNC_MINUTES=5
  *
  * Limitacion: no corre con la pestana cerrada. Para automatizar siempre usar
  * un cron/Edge Function en infraestructura.
@@ -43,7 +42,7 @@ export function DashboardBackgroundSync({ groupId }: { groupId: string }) {
       }
     };
 
-    const firstId = window.setTimeout(() => void tick(), FIRST_SYNC_DELAY_MS);
+    const firstId = window.setTimeout(() => void tick(), period);
     const repeatId = window.setInterval(() => void tick(), period);
 
     return () => {

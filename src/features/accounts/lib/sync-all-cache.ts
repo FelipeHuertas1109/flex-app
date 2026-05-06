@@ -2,12 +2,11 @@
 
 import { syncAllAccounts } from "@/features/accounts/actions";
 
-/** Minutos entre syncs automáticos si no defines env (5-120). */
-const DEFAULT_MINUTES = 15;
+/** Minutos entre ticks automáticos si no defines env (5-120). */
+const DEFAULT_MINUTES = 5;
 const MIN_MINUTES = 5;
 const MAX_MINUTES = 120;
 
-export const FIRST_SYNC_DELAY_MS = 120_000;
 export const RECENT_SYNC_CACHE_MS = 30_000;
 
 type SyncAllAccountsResult = Awaited<ReturnType<typeof syncAllAccounts>>;

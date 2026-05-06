@@ -36,6 +36,7 @@ type RiotAccountRow = {
   solo_total_games: number | null;
   average_position: string | number | null;
   is_in_game: boolean | null;
+  live_game_checked_at: string | null;
   last_synced_at: string | null;
   routing_platform?: string | null;
 };
@@ -117,7 +118,7 @@ export async function getDashboardSnapshot(viewerId?: string): Promise<Dashboard
     supabase
       .from("group_accounts")
       .select(
-        "id, user_id, is_shared, custom_name, credential_user, credential_psw, riot_accounts(game_name, tag_line, tier, rank, lp, win_rate, total_games, solo_tier, solo_rank, solo_lp, solo_win_rate, solo_total_games, average_position, is_in_game, last_synced_at, routing_platform)",
+        "id, user_id, is_shared, custom_name, credential_user, credential_psw, riot_accounts(game_name, tag_line, tier, rank, lp, win_rate, total_games, solo_tier, solo_rank, solo_lp, solo_win_rate, solo_total_games, average_position, is_in_game, live_game_checked_at, last_synced_at, routing_platform)",
       )
       .eq("group_id", groupId),
     supabase
@@ -155,6 +156,8 @@ export async function getDashboardSnapshot(viewerId?: string): Promise<Dashboard
       accountUser: acc.credential_user ?? null,
       accountPsw: acc.credential_psw ?? null,
       isInGame: Boolean(riot.is_in_game),
+      lastLiveGameCheckedAt: riot.live_game_checked_at ?? null,
+      lastStatsSyncedAt: riot.last_synced_at ?? null,
       isMain: acc.custom_name?.toLowerCase() === "main",
       routingPlatform: riot.routing_platform ?? null,
       flex: {

@@ -130,6 +130,20 @@ function queueStatsFor(account: LeagueAccount, queue: "flex" | "solo-duo") {
   return queue === "solo-duo" ? account.soloDuo : account.flex;
 }
 
+function latestIsoDate(values: Array<string | null | undefined>) {
+  let latest = 0;
+
+  values.forEach((value) => {
+    if (!value) return;
+    const time = new Date(value).getTime();
+    if (Number.isFinite(time) && time > latest) {
+      latest = time;
+    }
+  });
+
+  return latest > 0 ? new Date(latest).toISOString() : null;
+}
+
 function sortLeaderboardAccounts(
   accounts: AccountWithMember[],
   queue: "flex" | "solo-duo",
@@ -313,6 +327,8 @@ export function DashboardView({
     member: null,
   }));
   const accounts = [...memberAccounts, ...sharedAccounts];
+  const lastStatsSyncedAt = latestIsoDate(accounts.map((account) => account.lastStatsSyncedAt));
+  const lastLiveGameCheckedAt = latestIsoDate(accounts.map((account) => account.lastLiveGameCheckedAt));
   const sortedAccounts = sortLeaderboardAccounts(accounts, queue, sort, sortDirection);
   const worstWinRateAccount = sortedAccounts
     .filter((account) => {
@@ -426,42 +442,62 @@ export function DashboardView({
                 </p>
               </div>
             </div>
-            <div className="flex flex-wrap items-center justify-end gap-2 self-start">
-              <LeaderboardNavLink
-                nextState={{ queue: "flex", sort, sortDirection }}
-                onNavigate={navigateLeaderboard}
-              >
-                <Badge tone={queue === "flex" ? "teal" : "neutral"}>Flex</Badge>
-              </LeaderboardNavLink>
-              <LeaderboardNavLink
-                nextState={{ queue: "solo-duo", sort, sortDirection }}
-                onNavigate={navigateLeaderboard}
-              >
-                <Badge tone={queue === "solo-duo" ? "teal" : "neutral"}>Solo/Duo</Badge>
-              </LeaderboardNavLink>
-              <span className="mx-1 hidden h-5 w-px bg-cyan-200/14 md:hidden sm:block" />
-              <LeaderboardNavLink
-                className="md:hidden"
-                nextState={{ queue, sort: "rank", sortDirection: nextSortDirection(sort, sortDirection, "rank") }}
-                onNavigate={navigateLeaderboard}
-              >
-                <Badge tone={sort === "rank" ? "teal" : "neutral"}>Rango {sort === "rank" ? (sortDirection === "asc" ? "↑" : "↓") : ""}</Badge>
-              </LeaderboardNavLink>
-              <LeaderboardNavLink
-                className="md:hidden"
-                nextState={{ queue, sort: "games", sortDirection: nextSortDirection(sort, sortDirection, "games") }}
-                onNavigate={navigateLeaderboard}
-              >
-                <Badge tone={sort === "games" ? "teal" : "neutral"}>Partidas {sort === "games" ? (sortDirection === "asc" ? "↑" : "↓") : ""}</Badge>
-              </LeaderboardNavLink>
-              <LeaderboardNavLink
-                className="md:hidden"
-                nextState={{ queue, sort: "win-rate", sortDirection: nextSortDirection(sort, sortDirection, "win-rate") }}
-                onNavigate={navigateLeaderboard}
-              >
-                <Badge tone={sort === "win-rate" ? "teal" : "neutral"}>Win rate {sort === "win-rate" ? (sortDirection === "asc" ? "↑" : "↓") : ""}</Badge>
-              </LeaderboardNavLink>
-              <SyncAllAccountsButton groupId={snapshot.group.id} />
+            <div className="flex w-full flex-col items-stretch gap-2 sm:w-auto sm:items-end">
+              <div className="flex flex-wrap items-center justify-end gap-2">
+                <div className="flex rounded-lg border border-white/10 bg-black/24 p-1 shadow-inner shadow-black/20">
+                  <LeaderboardNavLink
+                    nextState={{ queue: "flex", sort, sortDirection }}
+                    onNavigate={navigateLeaderboard}
+                  >
+                    <span className={cn(
+                      "inline-flex h-8 items-center rounded-md px-3 text-xs font-black transition",
+                      queue === "flex"
+                        ? "bg-cyan-400/18 text-cyan-100 shadow-[0_0_0_1px_rgba(34,211,238,0.38)]"
+                        : "text-slate-400 hover:bg-white/6 hover:text-slate-200",
+                    )}>
+                      Flex
+                    </span>
+                  </LeaderboardNavLink>
+                  <LeaderboardNavLink
+                    nextState={{ queue: "solo-duo", sort, sortDirection }}
+                    onNavigate={navigateLeaderboard}
+                  >
+                    <span className={cn(
+                      "inline-flex h-8 items-center rounded-md px-3 text-xs font-black transition",
+                      queue === "solo-duo"
+                        ? "bg-cyan-400/18 text-cyan-100 shadow-[0_0_0_1px_rgba(34,211,238,0.38)]"
+                        : "text-slate-400 hover:bg-white/6 hover:text-slate-200",
+                    )}>
+                      Solo/Duo
+                    </span>
+                  </LeaderboardNavLink>
+                </div>
+                <div className="flex flex-wrap items-center justify-end gap-2 md:hidden">
+                  <LeaderboardNavLink
+                    nextState={{ queue, sort: "rank", sortDirection: nextSortDirection(sort, sortDirection, "rank") }}
+                    onNavigate={navigateLeaderboard}
+                  >
+                    <Badge tone={sort === "rank" ? "teal" : "neutral"}>Rango {sort === "rank" ? (sortDirection === "asc" ? "↑" : "↓") : ""}</Badge>
+                  </LeaderboardNavLink>
+                  <LeaderboardNavLink
+                    nextState={{ queue, sort: "games", sortDirection: nextSortDirection(sort, sortDirection, "games") }}
+                    onNavigate={navigateLeaderboard}
+                  >
+                    <Badge tone={sort === "games" ? "teal" : "neutral"}>Partidas {sort === "games" ? (sortDirection === "asc" ? "↑" : "↓") : ""}</Badge>
+                  </LeaderboardNavLink>
+                  <LeaderboardNavLink
+                    nextState={{ queue, sort: "win-rate", sortDirection: nextSortDirection(sort, sortDirection, "win-rate") }}
+                    onNavigate={navigateLeaderboard}
+                  >
+                    <Badge tone={sort === "win-rate" ? "teal" : "neutral"}>Win rate {sort === "win-rate" ? (sortDirection === "asc" ? "↑" : "↓") : ""}</Badge>
+                  </LeaderboardNavLink>
+                </div>
+              </div>
+              <SyncAllAccountsButton
+                groupId={snapshot.group.id}
+                lastLiveGameCheckedAt={lastLiveGameCheckedAt}
+                lastStatsSyncedAt={lastStatsSyncedAt}
+              />
             </div>
           </div>
 

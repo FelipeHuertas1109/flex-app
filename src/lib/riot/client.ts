@@ -88,6 +88,7 @@ async function fetchRiotJson<T>(
       response = await fetch(url, {
         headers: options.headers,
         signal: controller.signal,
+        cache: "no-store",
       });
 
       if (response.ok) {
@@ -103,8 +104,15 @@ async function fetchRiotJson<T>(
         continue;
       }
 
-      if (response.status === 401 || response.status === 403) {
-        throw new RiotApiRequestError("Riot API Key rechazada o expirada. Actualizala en Key.", response.status);
+      if (response.status === 401) {
+        throw new RiotApiRequestError("Riot API Key invalida o expirada. Actualizala en Key.", response.status);
+      }
+
+      if (response.status === 403) {
+        throw new RiotApiRequestError(
+          `${options.requestLabel} devolvio 403 Forbidden. La key puede ser valida, pero Riot no autorizo este endpoint o region para esta key.`,
+          response.status,
+        );
       }
 
       if (response.status === 429) {
@@ -194,13 +202,20 @@ export async function fetchLiveGameByPuuid(
   apiKey: string,
 ): Promise<boolean> {
   const headers = { "X-Riot-Token": apiKey };
-  const spectatorUrl = `https://${platform}.api.riotgames.com/lol/spectator/v5/active-games/by-puuid/${puuid}`;
-  const spectatorRes = await fetch(spectatorUrl, { headers });
-
-  if (spectatorRes.ok) return true;
-  if (spectatorRes.status === 404) return false;
-
-  throw new Error(`Spectator API error: ${spectatorRes.status}`);
+  const spectatorUrl = `https://${platform}.api.riotgames.com/lol/spectator/v5/active-games/by-summoner/${puuid}`;
+  try {
+    await fetchRiotJson<unknown>(spectatorUrl, {
+      headers,
+      notFoundMessage: "LIVE_GAME_NOT_FOUND",
+      requestLabel: `Spectator API en ${platform}`,
+    });
+    return true;
+  } catch (error) {
+    if (error instanceof RiotApiRequestError && error.status === 404) {
+      return false;
+    }
+    throw error;
+  }
 }
 
 export async function fetchLeagueStatsByPuuid(
@@ -232,4 +247,3 @@ export async function fetchLeagueStatsByPuuid(
     throw error;
   }
 }
-
