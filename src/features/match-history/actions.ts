@@ -401,19 +401,39 @@ export async function getMatchHistory(groupAccountId: string, queue: QueueFilter
       }
     }
 
-    const [champions, itemsMap, summonerSpellsMap, matchIds] = await Promise.all([
+    const admin = createAdminClient();
+
+    // 1. IDs ya guardados en DB para esta cuenta + cola
+    const { data: dbRows } = await admin
+      .from("matches")
+      .select("match_id")
+      .eq("riot_account_id", riotAccount.id)
+      .eq("queue_id", QUEUE_IDS[queue]);
+
+    const cachedIds = new Set(dbRows?.map((r) => r.match_id as string) ?? []);
+
+    // 2. Últimos 20 de Riot + mapas de Data Dragon en paralelo
+    const [champions, itemsMap, summonerSpellsMap, riotMatchIds] = await Promise.all([
       getChampionsByKeyMap(),
       getItemsMap(),
       getSummonerSpellsMap(),
       fetchMatchIdsByPuuid(puuid, platform, riotApiKey.apiKey, 20, QUEUE_IDS[queue]),
     ]);
 
-    const matches = await runWithConcurrency(matchIds, 3, async (matchId) => fetchMatchById(matchId, platform, riotApiKey.apiKey!));
-    const history = matches.flatMap((match) => {
-      const participant = match.info.participants.find((item) => item.puuid === puuid);
-      if (!participant) return [];
-      return [toHistoryItem(match, participant, champions, itemsMap, summonerSpellsMap)];
-    });
+    // 3. Delta: solo las que no están en DB
+    const newMatchIds = riotMatchIds.filter((id) => !cachedIds.has(id));
+
+    // 4. Fetchear solo las nuevas
+    if (newMatchIds.length > 0) {
+      const newRiotMatches = await runWithConcurrency(
+        newMatchIds, 3,
+        async (matchId) => fetchMatchById(matchId, platform, riotApiKey.apiKey!),
+      );
+      await upsertMatchesToDb(newRiotMatches, riotAccount.id, puuid, champions, itemsMap, summonerSpellsMap, platform, admin);
+    }
+
+    // 5. Leer las últimas 20 desde DB y reconstruir
+    const history = await readMatchHistoryFromDb(riotAccount.id, QUEUE_IDS[queue], puuid, admin);
 
     return {
       account: {
@@ -436,6 +456,196 @@ export async function getMatchHistory(groupAccountId: string, queue: QueueFilter
           : "No se pudo consultar el historial de partidas.",
     };
   }
+}
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+type AdminClient = ReturnType<typeof createAdminClient>;
+
+async function upsertMatchesToDb(
+  riotMatches: RiotMatchDto[],
+  riotAccountId: string,
+  selectedPuuid: string,
+  champions: Map<number, { name: string; imageUrl: string }>,
+  itemsMap: Map<string, { name: string; imageUrl: string }>,
+  summonerSpellsMap: Map<number, { name: string; imageUrl: string }>,
+  platform: string,
+  admin: AdminClient,
+): Promise<void> {
+  for (const match of riotMatches) {
+    const participant = match.info.participants.find((p) => p.puuid === selectedPuuid);
+    if (!participant) continue;
+
+    const historyItem = toHistoryItem(match, participant, champions, itemsMap, summonerSpellsMap);
+    const queueId = match.info.queueId;
+    const playedAt = match.info.gameEndTimestamp
+      ? new Date(match.info.gameEndTimestamp).toISOString()
+      : new Date(match.info.gameStartTimestamp ?? match.info.gameCreation ?? 0).toISOString();
+
+    // Upsert partida principal (cuenta seguida)
+    await admin.from("matches").upsert({
+      riot_account_id: riotAccountId,
+      match_id: historyItem.matchId,
+      queue_id: queueId,
+      queue_label: historyItem.queue,
+      game_duration: match.info.gameDuration,
+      game_mode: match.info.gameMode,
+      platform,
+      champion: historyItem.championName,
+      champion_image_url: historyItem.championImageUrl,
+      lane_role: historyItem.lane,
+      win: historyItem.result === "Victoria",
+      kills: historyItem.kills,
+      deaths: historyItem.deaths,
+      assists: historyItem.assists,
+      cs: historyItem.creepScore,
+      cs_per_minute: historyItem.creepScorePerMinute,
+      kda: historyItem.kda,
+      kill_participation: historyItem.killParticipation,
+      op_score: null,
+      op_label: null,
+      lp_change: historyItem.lpChange,
+      damage: historyItem.damageDealtToChampions,
+      damage_taken: historyItem.damageTaken,
+      gold: historyItem.goldEarned,
+      vision: historyItem.visionScore,
+      wards_placed: historyItem.wardsPlaced,
+      wards_killed: historyItem.wardsKilled,
+      largest_multi_kill: historyItem.largestMultiKill,
+      items: historyItem.items,
+      summoner_spells: historyItem.summonerSpells,
+      played_at: playedAt,
+    }, { onConflict: "riot_account_id,match_id", ignoreDuplicates: true });
+
+    // Upsert los 10 participantes
+    const participantRows = historyItem.teams.flatMap((team) =>
+      team.participants.map((p) => ({
+        match_id: historyItem.matchId,
+        puuid: p.puuid,
+        riot_id: p.riotId,
+        champion_name: p.championName,
+        champion_image_url: p.championImageUrl,
+        team_id: team.id,
+        win: team.result === "Victoria",
+        kills: p.kills,
+        deaths: p.deaths,
+        assists: p.assists,
+        cs: p.creepScore,
+        damage_dealt: p.damageDealtToChampions,
+        gold_earned: p.goldEarned,
+        vision_score: p.visionScore,
+        op_score: p.opScore,
+        op_label: p.opLabel,
+        lane: p.lane,
+        kda: p.kda,
+        items: p.items,
+        summoner_spells: p.summonerSpells,
+      })),
+    );
+
+    await admin.from("match_participants").upsert(participantRows, { onConflict: "match_id,puuid", ignoreDuplicates: true });
+  }
+}
+
+async function readMatchHistoryFromDb(
+  riotAccountId: string,
+  queueId: number,
+  selectedPuuid: string,
+  admin: AdminClient,
+): Promise<MatchHistoryItem[]> {
+  const { data: matchRows } = await admin
+    .from("matches")
+    .select("*")
+    .eq("riot_account_id", riotAccountId)
+    .eq("queue_id", queueId)
+    .order("played_at", { ascending: false })
+    .limit(20);
+
+  if (!matchRows?.length) return [];
+
+  const matchIds = matchRows.map((r) => r.match_id as string);
+
+  const { data: participantRows } = await admin
+    .from("match_participants")
+    .select("*")
+    .in("match_id", matchIds);
+
+  const participantsByMatch = new Map<string, typeof participantRows>();
+  for (const p of participantRows ?? []) {
+    const list = participantsByMatch.get(p.match_id) ?? [];
+    list.push(p);
+    participantsByMatch.set(p.match_id, list);
+  }
+
+  return matchRows.map((row): MatchHistoryItem => {
+    const allParticipants = participantsByMatch.get(row.match_id) ?? [];
+    const scores = new Map(allParticipants.map((p) => [p.puuid as string, (p.op_score as number) ?? 0]));
+    const sorted = [...allParticipants].sort((a, b) => (b.op_score ?? 0) - (a.op_score ?? 0));
+    const rankMap = new Map(sorted.map((p, i) => [p.puuid as string, i + 1]));
+
+    const teams = [100, 200].map((teamId) => {
+      const teamPs = allParticipants.filter((p) => p.team_id === teamId);
+      const teamWin = teamPs[0]?.win ?? false;
+      return {
+        id: teamId,
+        label: TEAM_LABELS[teamId] ?? String(teamId),
+        result: (teamWin ? "Victoria" : "Derrota") as "Victoria" | "Derrota",
+        participants: teamPs.map((p): MatchHistoryParticipant => ({
+          assists: p.assists ?? 0,
+          championImageUrl: p.champion_image_url ?? null,
+          championName: p.champion_name ?? "",
+          creepScore: p.cs ?? 0,
+          damageDealtToChampions: p.damage_dealt ?? 0,
+          deaths: p.deaths ?? 0,
+          goldEarned: p.gold_earned ?? 0,
+          items: (p.items as MatchHistoryParticipant["items"]) ?? [],
+          kda: p.kda ?? "0.00",
+          kills: p.kills ?? 0,
+          lane: p.lane ?? "",
+          opLabel: (p.op_label as "MVP" | "ACE" | null) ?? null,
+          opScore: p.op_score ?? 0,
+          participantId: 0,
+          puuid: p.puuid ?? "",
+          riotId: p.riot_id ?? "",
+          selected: p.puuid === selectedPuuid,
+          summonerSpells: (p.summoner_spells as MatchHistoryParticipant["summonerSpells"]) ?? [],
+          visionScore: p.vision_score ?? 0,
+        })),
+      };
+    });
+
+    const gameEndTs = row.played_at ? new Date(row.played_at as string).getTime() : 0;
+
+    return {
+      id: row.match_id,
+      championImageUrl: row.champion_image_url ?? null,
+      championName: row.champion ?? "",
+      creepScore: row.cs ?? 0,
+      creepScorePerMinute: row.cs_per_minute ?? "0.0",
+      damageDealtToChampions: row.damage ?? 0,
+      damageTaken: row.damage_taken ?? 0,
+      dateLabel: formatDate(gameEndTs),
+      duration: formatDuration(row.game_duration ?? 0),
+      gameMode: row.game_mode ?? "",
+      goldEarned: row.gold ?? 0,
+      items: (row.items as MatchHistoryItem["items"]) ?? [],
+      kda: row.kda ?? "0.00",
+      killParticipation: row.kill_participation ?? 0,
+      kills: row.kills ?? 0,
+      deaths: row.deaths ?? 0,
+      assists: row.assists ?? 0,
+      lane: row.lane_role ?? "",
+      lpChange: row.lp_change ?? null,
+      largestMultiKill: row.largest_multi_kill ?? null,
+      matchId: row.match_id,
+      queue: row.queue_label ?? "",
+      result: row.win ? "Victoria" : "Derrota",
+      summonerSpells: (row.summoner_spells as MatchHistoryItem["summonerSpells"]) ?? [],
+      teams,
+      visionScore: row.vision ?? 0,
+      wardsKilled: row.wards_killed ?? 0,
+      wardsPlaced: row.wards_placed ?? 0,
+    };
+  });
 }
 
 export type ParticipantRankInfo = { tier: string; division: string | null };

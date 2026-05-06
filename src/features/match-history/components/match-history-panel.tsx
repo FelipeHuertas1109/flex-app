@@ -40,28 +40,25 @@ export function MatchHistoryPanel({ snapshot }: { snapshot: DashboardSnapshot })
   const accounts = useMemo(() => allAccounts(snapshot), [snapshot]);
   const [selectedAccountId, setSelectedAccountId] = useState(accounts[0]?.id ?? "");
   const [queue, setQueue] = useState<QueueFilter>("soloq");
-  const [historyState, setHistoryState] = useState<{ accountId: string; queue: QueueFilter; result: MatchHistoryResult } | null>(null);
+  const [historyCache, setHistoryCache] = useState<Map<string, MatchHistoryResult>>(new Map());
   const [isPending, startTransition] = useTransition();
 
   const selectedAccount = accounts.find((account) => account.id === selectedAccountId) ?? accounts[0] ?? null;
-  const selectedHistory = historyState?.accountId === selectedAccount?.id && historyState.queue === queue ? historyState.result : null;
+  const cacheKey = `${selectedAccount?.id}:${queue}`;
+  const selectedHistory = historyCache.get(cacheKey) ?? null;
 
-  const fetchHistory = (accountId: string, q: QueueFilter) => {
-    setHistoryState(null);
+  const loadHistory = (accountId: string, q: QueueFilter, force = false) => {
+    const key = `${accountId}:${q}`;
+    if (!force && historyCache.has(key)) return;
     startTransition(async () => {
       const result = await getMatchHistory(accountId, q);
-      setHistoryState({ accountId, queue: q, result });
+      setHistoryCache((prev) => new Map(prev).set(key, result));
     });
   };
 
   useEffect(() => {
     if (!selectedAccount?.id) return;
-    let cancelled = false;
-    startTransition(async () => {
-      const result = await getMatchHistory(selectedAccount.id, queue);
-      if (!cancelled) setHistoryState({ accountId: selectedAccount.id, queue, result });
-    });
-    return () => { cancelled = true; };
+    loadHistory(selectedAccount.id, queue);
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedAccount?.id, queue]);
 
@@ -88,7 +85,7 @@ export function MatchHistoryPanel({ snapshot }: { snapshot: DashboardSnapshot })
                 <Button
                   className="self-start"
                   disabled={isPending}
-                  onClick={() => fetchHistory(selectedAccount.id, queue)}
+                  onClick={() => loadHistory(selectedAccount.id, queue, true)}
                   variant="secondary"
                 >
                   {isPending ? "Consultando..." : "Actualizar historial"}
@@ -352,7 +349,7 @@ function MatchCard({
 function ExpandedMatchDetails({ match, routingPlatform }: { match: MatchHistoryItem; routingPlatform: string }) {
   const allParticipants = match.teams.flatMap((t) => t.participants);
   const sorted = [...allParticipants].sort((a, b) => b.opScore - a.opScore);
-  const rankMap = new Map(sorted.map((p, i) => [p.participantId, i + 1]));
+  const rankMap = new Map(sorted.map((p, i) => [p.puuid, i + 1]));
 
   const [tierMap, setTierMap] = useState<Record<string, ParticipantRankInfo>>({});
 
@@ -397,9 +394,9 @@ function ExpandedMatchDetails({ match, routingPlatform }: { match: MatchHistoryI
             <div className="divide-y divide-white/8">
               {team.participants.map((participant) => (
                 <ParticipantRow
-                  key={participant.participantId}
+                  key={participant.puuid || participant.participantId}
                   participant={participant}
-                  rank={rankMap.get(participant.participantId) ?? 10}
+                  rank={rankMap.get(participant.puuid) ?? 10}
                   tier={tierMap[participant.puuid] ?? null}
                 />
               ))}
