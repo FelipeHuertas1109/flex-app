@@ -15,6 +15,7 @@ import {
   type RiotMatchParticipantDto,
 } from "@/lib/riot/client";
 import { routingPlatformToRegionLabel } from "@/lib/riot/routing-platform";
+import { CacheService } from "@/lib/redis/cache";
 import type {
   MatchHistoryAccount,
   MatchHistoryItem,
@@ -446,38 +447,43 @@ export async function getCachedMatchHistory(
   queue: QueueFilter = "soloq",
   limit = 20,
 ): Promise<MatchHistoryResult> {
-  const authorized = await getAuthorizedAccount(groupAccountId);
-  if (authorized.error !== null) return { error: authorized.error };
+  const cacheKey = `matchHistory:${groupAccountId}:${queue}:${limit}`;
+  const ttl = 60; // 1 minute in seconds
 
-  try {
-    const platform = authorized.riotAccount.routing_platform?.trim().toLowerCase() ?? null;
-    const admin = createAdminClient();
-    const history = await readMatchHistoryFromDb(
-      authorized.riotAccount.id,
-      QUEUE_IDS[queue],
-      authorized.riotAccount.puuid ?? "",
-      admin,
-      limit,
-    );
+  return CacheService.getOrSet(cacheKey, ttl, async () => {
+    const authorized = await getAuthorizedAccount(groupAccountId);
+    if (authorized.error !== null) return { error: authorized.error };
 
-    return {
-      account: {
-        id: groupAccountId,
-        label: `${authorized.riotAccount.game_name}#${authorized.riotAccount.tag_line}`,
-        ownerLabel: authorized.row.is_shared
-          ? "Cuenta compartida"
-          : authorized.profile?.full_name || authorized.profile?.email || "Miembro",
-        region: platform ? routingPlatformToRegionLabel(platform) : "Sin region",
-        routingPlatform: platform,
-      },
-      error: null,
-      matches: history,
-      updatedAt: new Date().toISOString(),
-    };
-  } catch (error) {
-    console.error("getCachedMatchHistory:", error);
-    return { error: "No se pudo leer el historial guardado." };
-  }
+    try {
+      const platform = authorized.riotAccount.routing_platform?.trim().toLowerCase() ?? null;
+      const admin = createAdminClient();
+      const history = await readMatchHistoryFromDb(
+        authorized.riotAccount.id,
+        QUEUE_IDS[queue],
+        authorized.riotAccount.puuid ?? "",
+        admin,
+        limit,
+      );
+
+      return {
+        account: {
+          id: groupAccountId,
+          label: `${authorized.riotAccount.game_name}#${authorized.riotAccount.tag_line}`,
+          ownerLabel: authorized.row.is_shared
+            ? "Cuenta compartida"
+            : authorized.profile?.full_name || authorized.profile?.email || "Miembro",
+          region: platform ? routingPlatformToRegionLabel(platform) : "Sin region",
+          routingPlatform: platform,
+        },
+        error: null,
+        matches: history,
+        updatedAt: new Date().toISOString(),
+      };
+    } catch (error) {
+      console.error("getCachedMatchHistory:", error);
+      return { error: "No se pudo leer el historial guardado." };
+    }
+  });
 }
 
 async function syncSelectedMatchHistoryInternal(
