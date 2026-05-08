@@ -7,3 +7,23 @@ export function cleanRiotIdPart(value: string) {
 export function riotAccountPath(gameName: string, tagLine: string) {
   return encodeURIComponent(`${cleanRiotIdPart(gameName)}-${cleanRiotIdPart(tagLine)}`);
 }
+
+export function parseRiotId(riotId: string | null | undefined) {
+  if (!riotId) return null;
+
+  const cleaned = cleanRiotIdPart(riotId);
+  const separatorIndex = cleaned.lastIndexOf("#");
+  if (separatorIndex <= 0 || separatorIndex === cleaned.length - 1) {
+    return null;
+  }
+
+  return {
+    gameName: cleaned.slice(0, separatorIndex),
+    tagLine: cleaned.slice(separatorIndex + 1),
+  };
+}
+
+export function leagueOfGraphsSummonerUrl(region: string, gameName: string, tagLine: string) {
+  const slug = cleanRiotIdPart(region).toLowerCase() || cleanRiotIdPart(tagLine).toLowerCase() || "lan";
+  return `https://www.leagueofgraphs.com/summoner/${slug}/${riotAccountPath(gameName, tagLine)}`;
+}

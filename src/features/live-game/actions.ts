@@ -7,10 +7,14 @@ import { getChampionsByKeyMap, getRunesMap, getSummonerSpellsMap } from "@/lib/l
 import { getStoredRiotApiKeyRecord } from "@/lib/riot/api-key";
 import {
   fetchLiveGameDetailsByPuuid,
+  fetchLeagueStatsByPuuid,
   fetchRiotAccountByRiotId,
   RiotApiRequestError,
+  type QueueStats,
 } from "@/lib/riot/client";
+import { leagueOfGraphsSummonerUrl, parseRiotId } from "@/lib/riot/format";
 import { routingPlatformToRegionLabel } from "@/lib/riot/routing-platform";
+import type { LeagueAccount, RankTier } from "@/features/dashboard/types";
 
 const QUEUE_LABELS: Record<number, string> = {
   400: "Normal Draft",
@@ -33,6 +37,39 @@ const TEAM_LABELS: Record<number, string> = {
   100: "Azul",
   200: "Rojo",
 };
+
+const RANK_TIERS = new Set<RankTier>([
+  "UNRANKED",
+  "IRON",
+  "BRONZE",
+  "SILVER",
+  "GOLD",
+  "PLATINUM",
+  "EMERALD",
+  "DIAMOND",
+  "MASTER",
+  "GRANDMASTER",
+  "CHALLENGER",
+]);
+
+type ActiveQueueKey = "soloDuo" | "flex";
+type ActiveQueueRank = {
+  division: LeagueAccount["flex"]["division"];
+  lp: number;
+  queueLabel: string;
+  tier: RankTier;
+  totalGames: number;
+  winRate: number;
+};
+
+const ACTIVE_QUEUE_RANK_CACHE_TTL_MS = 30 * 60 * 1000;
+
+const RANKED_QUEUE_BY_ID: Partial<Record<number, { key: ActiveQueueKey; label: string }>> = {
+  420: { key: "soloDuo", label: "Solo/Duo" },
+  440: { key: "flex", label: "Flex" },
+};
+
+const activeQueueRankCache = new Map<string, { rank: ActiveQueueRank; storedAt: number }>();
 
 type AuthorizedAccountRow = {
   group_id: string;
@@ -67,6 +104,86 @@ function formatGameDuration(gameStartTime: number, fallbackSeconds: number) {
   const minutes = Math.floor(elapsedSeconds / 60);
   const seconds = elapsedSeconds % 60;
   return `${minutes}:${seconds.toString().padStart(2, "0")}`;
+}
+
+function toRankTier(value: string | null | undefined): RankTier {
+  const tier = (value ?? "").toUpperCase();
+  return RANK_TIERS.has(tier as RankTier) ? (tier as RankTier) : "UNRANKED";
+}
+
+function normalizeDivision(rank: string | null | undefined): LeagueAccount["flex"]["division"] {
+  const division = rank?.trim().toUpperCase();
+  if (division === "I" || division === "II" || division === "III" || division === "IV") return division;
+  return null;
+}
+
+function activeQueueRankCacheKey(platform: string, puuid: string, queueKey: ActiveQueueKey) {
+  return `${platform}:${queueKey}:${puuid}`;
+}
+
+function toActiveQueueRank(stats: QueueStats, queueLabel: string): ActiveQueueRank {
+  return {
+    division: normalizeDivision(stats.rank),
+    lp: stats.lp,
+    queueLabel,
+    tier: toRankTier(stats.tier),
+    totalGames: stats.totalGames,
+    winRate: stats.winRate,
+  };
+}
+
+async function runWithConcurrency<T, R>(items: T[], limit: number, task: (item: T) => Promise<R>): Promise<R[]> {
+  const results: R[] = [];
+  let nextIndex = 0;
+
+  async function worker() {
+    while (nextIndex < items.length) {
+      const index = nextIndex;
+      nextIndex += 1;
+      results[index] = await task(items[index]);
+    }
+  }
+
+  await Promise.all(Array.from({ length: Math.min(limit, items.length) }, () => worker()));
+  return results;
+}
+
+async function getCachedActiveQueueRank({
+  apiKey,
+  platform,
+  puuid,
+  queue,
+  riotId,
+}: {
+  apiKey: string;
+  platform: string;
+  puuid: string;
+  queue: { key: ActiveQueueKey; label: string };
+  riotId: string | undefined;
+}) {
+  const cacheKey = activeQueueRankCacheKey(platform, puuid, queue.key);
+  const cachedRank = activeQueueRankCache.get(cacheKey);
+  if (cachedRank && Date.now() - cachedRank.storedAt < ACTIVE_QUEUE_RANK_CACHE_TTL_MS) {
+    return cachedRank.rank;
+  }
+  if (cachedRank) {
+    activeQueueRankCache.delete(cacheKey);
+  }
+
+  try {
+    const stats = await fetchLeagueStatsByPuuid(puuid, platform, apiKey);
+    const rank = toActiveQueueRank(stats[queue.key], queue.label);
+    activeQueueRankCache.set(cacheKey, { rank, storedAt: Date.now() });
+    return rank;
+  } catch (error) {
+    console.error(`League API participante ${riotId ?? puuid}:`, error);
+    const fallbackRank = toActiveQueueRank(
+      { tier: "UNRANKED", rank: null, lp: 0, winRate: 0, totalGames: 0 },
+      queue.label,
+    );
+    activeQueueRankCache.set(cacheKey, { rank: fallbackRank, storedAt: Date.now() });
+    return fallbackRank;
+  }
 }
 
 export async function getLiveGameDetails(groupAccountId: string) {
@@ -160,14 +277,35 @@ export async function getLiveGameDetails(groupAccountId: string) {
       getRunesMap(),
       getSummonerSpellsMap(),
     ]);
+    const rankedQueue = RANKED_QUEUE_BY_ID[liveGame.gameQueueConfigId] ?? null;
+    const rankEntries = rankedQueue
+      ? await runWithConcurrency(liveGame.participants, 3, async (participant) => {
+          const rank = await getCachedActiveQueueRank({
+            apiKey: riotApiKey.apiKey!,
+            platform,
+            puuid: participant.puuid,
+            queue: rankedQueue,
+            riotId: participant.riotId,
+          });
+          return [participant.puuid, rank] as const;
+        })
+      : [];
+    const ranksByPuuid = new Map(rankEntries);
+    const regionLabel = routingPlatformToRegionLabel(platform);
+
     const participants = liveGame.participants.map((participant) => {
       const champion = champions.get(participant.championId);
+      const parsedRiotId = parseRiotId(participant.riotId);
       return {
+        activeQueueRank: ranksByPuuid.get(participant.puuid) ?? null,
         bot: participant.bot,
         championId: participant.championId,
         championImageUrl: champion?.imageUrl ?? null,
         championName: champion?.name ?? `Champion ${participant.championId}`,
         isSelectedAccount: participant.puuid === puuid,
+        leagueOfGraphsUrl: parsedRiotId
+          ? leagueOfGraphsSummonerUrl(regionLabel, parsedRiotId.gameName, parsedRiotId.tagLine)
+          : null,
         perks: (participant.perks?.perkIds?.slice(0, 2) ?? []).map((perkId) => {
           const rune = runes.get(perkId);
           return {
@@ -199,7 +337,7 @@ export async function getLiveGameDetails(groupAccountId: string) {
         gameId: liveGame.gameId.toString(),
         gameMode: liveGame.gameMode,
         mapId: liveGame.mapId,
-        platform: routingPlatformToRegionLabel(platform),
+        platform: regionLabel,
         queue: QUEUE_LABELS[liveGame.gameQueueConfigId] ?? `Queue ${liveGame.gameQueueConfigId}`,
         teams: [100, 200].map((teamId) => ({
           id: teamId,
