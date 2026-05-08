@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
-import { cleanRiotIdPart, riotAccountPath } from "@/lib/riot/format";
+import { cleanRiotIdPart, leagueOfGraphsSummonerUrl, riotAccountPath } from "@/lib/riot/format";
 
 type ExternalStatsButtonProps = {
   gameName: string;
@@ -33,7 +33,7 @@ export function ExternalStatsButton({ gameName, region, tagLine }: ExternalStats
   const popoverRef = useRef<HTMLDivElement>(null);
   const account = riotAccountPath(gameName, tagLine);
   const slug = regionSlug(region, tagLine);
-  const leagueOfGraphsUrl = `https://www.leagueofgraphs.com/summoner/${slug}/${account}`;
+  const leagueOfGraphsUrl = leagueOfGraphsSummonerUrl(slug, gameName, tagLine);
   const opggUrl = `https://op.gg/lol/summoners/${slug}/${account}`;
 
   const updatePosition = () => {

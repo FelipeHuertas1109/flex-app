@@ -7,6 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { Panel } from "@/components/ui/panel";
 import { DashboardBackgroundSync } from "@/features/accounts/components/dashboard-background-sync";
 import { SyncAllAccountsButton } from "@/features/accounts/components/sync-all-accounts-button";
+import { RankBadge } from "@/features/dashboard/components/rank-badge";
 import {
   getGroupSyncVersion,
   subscribeToGroupSync,
@@ -255,18 +256,43 @@ function LiveGameDetails({ game }: { game: LiveGameInfo }) {
               {team.participants.map((participant) => (
                 <div
                   className={cn(
-                    "flex min-w-0 items-center gap-3 px-4 py-3",
+                    "flex min-w-0 items-center gap-3 px-4 py-3 transition",
                     participant.isSelectedAccount && "bg-amber-300/8",
+                    participant.leagueOfGraphsUrl && "hover:bg-white/[0.045]",
                   )}
                   key={participant.puuid}
                 >
                   <ChampionPortrait imageUrl={participant.championImageUrl} name={participant.championName} />
                   <div className="min-w-0 flex-1">
                     <div className="flex min-w-0 flex-wrap items-center gap-2">
-                      <p className="truncate text-sm font-black text-white">{participant.riotId}</p>
+                      {participant.leagueOfGraphsUrl ? (
+                        <a
+                          className="truncate text-sm font-black text-white underline-offset-4 transition hover:text-cyan-100 hover:underline"
+                          href={participant.leagueOfGraphsUrl}
+                          rel="noopener noreferrer"
+                          target="_blank"
+                          title="Abrir perfil en League of Graphs"
+                        >
+                          {participant.riotId}
+                        </a>
+                      ) : (
+                        <p className="truncate text-sm font-black text-white">{participant.riotId}</p>
+                      )}
                       {participant.isSelectedAccount ? <Badge tone="gold">Seleccionada</Badge> : null}
                     </div>
-                    <p className="mt-1 truncate text-xs font-medium text-slate-400">{participant.championName}</p>
+                    <div className="mt-1 flex min-w-0 flex-wrap items-center gap-2">
+                      <p className="truncate text-xs font-medium text-slate-400">{participant.championName}</p>
+                      {participant.activeQueueRank ? (
+                        <RankBadge
+                          className="h-6 max-w-[11rem] px-2 text-[10px]"
+                          division={participant.activeQueueRank.division}
+                          lp={participant.activeQueueRank.lp}
+                          tier={participant.activeQueueRank.tier}
+                        />
+                      ) : (
+                        <Badge className="h-5 px-1.5 text-[10px]" tone="neutral">Sin liga de cola</Badge>
+                      )}
+                    </div>
                   </div>
                   <div className="hidden shrink-0 items-center gap-2 sm:flex">
                     <IconGroup icons={participant.spells} label="Hechizos" />
