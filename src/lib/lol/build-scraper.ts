@@ -1,6 +1,7 @@
 import * as cheerio from "cheerio";
 import type { ChampionBuild, BuildItem, BuildRune, LolRole, Matchup } from "@/lib/lol/types";
 import { getLatestVersion } from "@/lib/lol/ddragon";
+import { CacheService } from "@/lib/redis/cache";
 
 const OPGG_BASE = "https://www.op.gg";
 const OPGG_CDN  = "https://opgg-static.akamaized.net";
@@ -14,14 +15,10 @@ const BROWSER_HEADERS = {
 };
 
 // ── Cache ────────────────────────────────────────────────────────────────────
-const TTL_MS = 5 * 60 * 1000;
-const cache = new Map<string, ChampionBuild>();
+const TTL_SEC = 5 * 60; // 5 minutes in seconds
 
 function cacheKey(champion: string, role: LolRole) {
-  return `${champion.toLowerCase()}:${role}`;
-}
-function isFresh(b: ChampionBuild) {
-  return Date.now() - b.cachedAt < TTL_MS;
+  return `build:${champion.toLowerCase()}:${role}`;
 }
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
@@ -227,40 +224,39 @@ export async function getChampionBuild(
   championId: string,
   role: LolRole,
 ): Promise<ChampionBuild | null> {
-  const key    = cacheKey(championId, role);
-  const cached = cache.get(key);
-  if (cached && isFresh(cached)) return cached;
+  const key = cacheKey(championId, role);
+  
+  return CacheService.getOrSet(key, TTL_SEC, async () => {
+    const version = await getLatestVersion();
 
-  const version = await getLatestVersion();
+    const [buildData, matchups] = await Promise.all([
+      scrapeBuildPage(championId, role),
+      scrapeCountersPage(championId, role, version),
+    ]);
 
-  const [buildData, matchups] = await Promise.all([
-    scrapeBuildPage(championId, role),
-    scrapeCountersPage(championId, role, version),
-  ]);
+    if (
+      buildData.items.length === 0 &&
+      buildData.runes.length === 0 &&
+      buildData.winRate === null
+    ) {
+      return null;
+    }
 
-  if (
-    buildData.items.length === 0 &&
-    buildData.runes.length === 0 &&
-    buildData.winRate === null
-  ) {
-    return null;
-  }
+    const result: ChampionBuild = {
+      champion: championId,
+      role,
+      patch: version,
+      winRate: buildData.winRate,
+      pickRate: buildData.pickRate,
+      items: buildData.items,
+      starterItems: buildData.starterItems,
+      runes: buildData.runes,
+      counters: matchups.counters,
+      strongAgainst: matchups.strongAgainst,
+      source: "op.gg",
+      cachedAt: Date.now(),
+    };
 
-  const result: ChampionBuild = {
-    champion: championId,
-    role,
-    patch: version,
-    winRate: buildData.winRate,
-    pickRate: buildData.pickRate,
-    items: buildData.items,
-    starterItems: buildData.starterItems,
-    runes: buildData.runes,
-    counters: matchups.counters,
-    strongAgainst: matchups.strongAgainst,
-    source: "op.gg",
-    cachedAt: Date.now(),
-  };
-
-  cache.set(key, result);
-  return result;
+    return result;
+  });
 }
