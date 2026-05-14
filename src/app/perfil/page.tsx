@@ -30,19 +30,39 @@ export default async function ProfilePage() {
     );
   }
 
-  const viewer = snapshot.members.find((member) => member.id === snapshot.viewerId);
-  const accounts = (viewer?.accounts ?? []).map((account) => ({
+  const memberAccounts = snapshot.members.flatMap((member) =>
+    member.accounts.map((account) => ({
+      id: account.id,
+      riotId: `${account.summonerName}#${account.tagLine}`,
+      region: account.region,
+      isMain: account.isMain,
+      isShared: account.isShared,
+      soloTier: account.soloDuo.tier,
+      soloDivision: account.soloDuo.division,
+      soloLp: account.soloDuo.lp,
+      soloWinRate: account.soloDuo.winRate,
+      soloTotalGames: account.soloDuo.totalGames,
+      memberName: member.name,
+      isOwner: member.id === snapshot.viewerId,
+    })),
+  );
+
+  const sharedAccounts = snapshot.sharedAccounts.map((account) => ({
     id: account.id,
     riotId: `${account.summonerName}#${account.tagLine}`,
     region: account.region,
     isMain: account.isMain,
-    isShared: account.isShared,
+    isShared: true,
     soloTier: account.soloDuo.tier,
     soloDivision: account.soloDuo.division,
     soloLp: account.soloDuo.lp,
     soloWinRate: account.soloDuo.winRate,
     soloTotalGames: account.soloDuo.totalGames,
+    memberName: "Sin dueño",
+    isOwner: false,
   }));
+
+  const allAccounts = [...memberAccounts, ...sharedAccounts];
 
   return (
     <AppShell user={shellUser}>
@@ -50,10 +70,10 @@ export default async function ProfilePage() {
         <Panel className="p-6 sm:p-8">
           <h1 className="text-2xl font-black text-white sm:text-3xl">Mi perfil</h1>
           <p className="mt-2 text-sm text-slate-300">
-            Gestiona las cuentas que has creado en <span className="font-semibold text-cyan-200">{snapshot.group.name}</span>. Puedes eliminar cuentas y marcar una o varias como principal.
+            Gestiona todas las cuentas de <span className="font-semibold text-cyan-200">{snapshot.group.name}</span>. Cualquier miembro puede marcar una cuenta como principal.
           </p>
         </Panel>
-        <ProfileAccountsPanel accounts={accounts} groupName={snapshot.group.name} />
+        <ProfileAccountsPanel accounts={allAccounts} groupName={snapshot.group.name} />
       </section>
     </AppShell>
   );

@@ -17,6 +17,8 @@ type ProfileAccountItem = {
   soloLp: number;
   soloWinRate: number;
   soloTotalGames: number;
+  memberName?: string;
+  isOwner?: boolean;
 };
 
 type ProfileAccountsPanelProps = {
@@ -61,7 +63,7 @@ export function ProfileAccountsPanel({ groupName, accounts }: ProfileAccountsPan
   if (accounts.length === 0) {
     return (
       <div className="rounded-xl border border-dashed border-cyan-300/28 bg-cyan-400/6 p-6 text-sm text-slate-300">
-        Aun no has creado cuentas en este grupo.
+        Aun no hay cuentas en este grupo.
       </div>
     );
   }
@@ -90,6 +92,9 @@ export function ProfileAccountsPanel({ groupName, accounts }: ProfileAccountsPan
               >
                 <p className="truncate text-sm font-black text-white">{account.riotId}</p>
                 <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-slate-300">
+                  {account.memberName ? (
+                    <span className="font-semibold text-indigo-300">{account.memberName}</span>
+                  ) : null}
                   <span className="text-slate-400">{account.region}</span>
                   <span className="font-semibold text-slate-200">SoloQ: {soloRank}</span>
                   <span className="font-semibold text-slate-200">LP: {account.soloLp}</span>
@@ -112,17 +117,19 @@ export function ProfileAccountsPanel({ groupName, accounts }: ProfileAccountsPan
                     ★
                   </span>
                 </IconActionButton>
-                <IconActionButton
-                  ariaLabel="Eliminar cuenta"
-                  disabled={rowPending}
-                  onClick={() => onDelete(account)}
-                  tone="danger"
-                  title="Eliminar cuenta"
-                >
-                  <span aria-hidden="true" className="text-base leading-none">
-                    🗑
-                  </span>
-                </IconActionButton>
+                {account.isOwner !== false ? (
+                  <IconActionButton
+                    ariaLabel="Eliminar cuenta"
+                    disabled={rowPending}
+                    onClick={() => onDelete(account)}
+                    tone="danger"
+                    title="Eliminar cuenta"
+                  >
+                    <span aria-hidden="true" className="text-base leading-none">
+                      🗑
+                    </span>
+                  </IconActionButton>
+                ) : null}
               </div>
             </div>
             {rowPending ? (

@@ -1,12 +1,13 @@
 "use client";
 
 import type { ReactNode } from "react";
-import { useLayoutEffect, useRef, useState } from "react";
+import { useLayoutEffect, useRef, useState, useTransition } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { AddAccountProvider, AddAccountTrigger } from "@/features/accounts/components/add-account-dialog";
 import { DashboardBackgroundSync } from "@/features/accounts/components/dashboard-background-sync";
 import { SyncAllAccountsButton } from "@/features/accounts/components/sync-all-accounts-button";
+import { setAccountMainStatus } from "@/features/accounts/actions";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Panel } from "@/components/ui/panel";
@@ -309,6 +310,22 @@ export function DashboardView({
   const sort = leaderboardState.sort;
   const sortDirection = leaderboardState.sortDirection;
 
+  const [togglingMainId, setTogglingMainId] = useState<string | null>(null);
+  const [mainToggleError, setMainToggleError] = useState<string | null>(null);
+  const [isMainTogglePending, startMainToggleTransition] = useTransition();
+
+  const handleToggleMain = (account: AccountWithMember) => {
+    setMainToggleError(null);
+    setTogglingMainId(account.id);
+    startMainToggleTransition(async () => {
+      const result = await setAccountMainStatus(account.id, !account.isMain);
+      if (result.error) {
+        setMainToggleError(result.error);
+      }
+      setTogglingMainId(null);
+    });
+  };
+
   const navigateLeaderboard = (nextState: LeaderboardState) => {
     setLeaderboardState((current) => {
       if (
@@ -442,6 +459,12 @@ export function DashboardView({
         />
       </section>
 
+      {mainToggleError ? (
+        <p className="rounded-lg border border-pink-400/35 bg-pink-500/10 px-4 py-2.5 text-sm font-medium text-pink-200 shadow-lg shadow-pink-500/10">
+          {mainToggleError}
+        </p>
+      ) : null}
+
       <section>
         <Panel className="overflow-hidden">
           <div className="flex flex-col gap-3 border-b border-cyan-200/10 bg-[radial-gradient(circle_at_0%_0%,rgba(25,216,255,0.12),transparent_34%)] p-5 sm:flex-row sm:items-center sm:justify-between">
@@ -561,6 +584,9 @@ export function DashboardView({
                         memberOptions={memberOptions}
                         queue={queue}
                         rowRef={registerDesktopRow(account.id)}
+                        togglingMainId={togglingMainId}
+                        isMainTogglePending={isMainTogglePending}
+                        onToggleMain={handleToggleMain}
                       />
                     ))}
                   </tbody>
@@ -579,6 +605,9 @@ export function DashboardView({
                       memberOptions={memberOptions}
                       queue={queue}
                       cardRef={registerMobileCard(account.id)}
+                      togglingMainId={togglingMainId}
+                      isMainTogglePending={isMainTogglePending}
+                      onToggleMain={handleToggleMain}
                     />
                   ))}
                 </div>
@@ -836,15 +865,22 @@ function LeaderboardRow({
   memberOptions,
   queue,
   rowRef,
+  togglingMainId,
+  isMainTogglePending,
+  onToggleMain,
 }: {
   account: AccountWithMember;
   index: number;
   memberOptions: MemberOption[];
   queue: "flex" | "solo-duo";
   rowRef?: (node: HTMLTableRowElement | null) => void;
+  togglingMainId: string | null;
+  isMainTogglePending: boolean;
+  onToggleMain: (account: AccountWithMember) => void;
 }) {
   const queueStats = queue === "solo-duo" ? account.soloDuo : account.flex;
   const rank = index + 1;
+  const rowPending = isMainTogglePending && togglingMainId === account.id;
   
   const rowTone = 
     rank === 1 ? "bg-linear-to-r from-amber-500/10 to-transparent border-amber-500/20" :
@@ -880,6 +916,21 @@ function LeaderboardRow({
       </td>
       <td className="rounded-r-lg px-4 py-5 align-middle">
         <div className="flex justify-end gap-2">
+          <button
+            aria-label={account.isMain ? "Quitar cuenta principal" : "Marcar como cuenta principal"}
+            className={cn(
+              "inline-flex h-9 w-9 items-center justify-center rounded-lg border text-base leading-none transition",
+              account.isMain
+                ? "border-amber-300/45 bg-amber-400/14 text-amber-200 shadow-lg shadow-amber-500/12 hover:border-amber-200/70 hover:bg-amber-400/20"
+                : "border-cyan-200/25 bg-white/8 text-slate-300 hover:border-amber-300/45 hover:bg-amber-400/10 hover:text-amber-200",
+            )}
+            disabled={rowPending}
+            onClick={() => onToggleMain(account)}
+            title={account.isMain ? "Quitar principal" : "Marcar principal"}
+            type="button"
+          >
+            <span aria-hidden="true">★</span>
+          </button>
           <Link
             className="inline-flex h-9 items-center justify-center rounded-lg border border-violet-300/40 bg-violet-500/10 px-3 text-xs font-black text-violet-100 shadow-lg shadow-violet-500/12 transition hover:border-violet-200/70 hover:bg-violet-500/16"
             href={`/perfil/cuenta/${account.id}`}
@@ -910,14 +961,21 @@ function LeaderboardCard({
   memberOptions,
   queue,
   cardRef,
+  togglingMainId,
+  isMainTogglePending,
+  onToggleMain,
 }: {
   account: AccountWithMember;
   index: number;
   memberOptions: MemberOption[];
   queue: "flex" | "solo-duo";
   cardRef?: (node: HTMLElement | null) => void;
+  togglingMainId: string | null;
+  isMainTogglePending: boolean;
+  onToggleMain: (account: AccountWithMember) => void;
 }) {
   const queueStats = queue === "solo-duo" ? account.soloDuo : account.flex;
+  const rowPending = isMainTogglePending && togglingMainId === account.id;
   const cardStyle =
     index === 0
       ? "border-amber-300/40 bg-linear-to-br from-amber-400/14 to-white/[0.035] shadow-amber-500/12"
@@ -947,6 +1005,21 @@ function LeaderboardCard({
         <MetricPill label="Win rate" value={`${queueStats.winRate}%`} />
       </div>
       <div className="mt-4 flex justify-end gap-2 border-t border-cyan-200/12 pt-3">
+        <button
+          aria-label={account.isMain ? "Quitar cuenta principal" : "Marcar como cuenta principal"}
+          className={cn(
+            "inline-flex h-9 w-9 items-center justify-center rounded-lg border text-base leading-none transition",
+            account.isMain
+              ? "border-amber-300/45 bg-amber-400/14 text-amber-200 shadow-lg shadow-amber-500/12 hover:border-amber-200/70 hover:bg-amber-400/20"
+              : "border-cyan-200/25 bg-white/8 text-slate-300 hover:border-amber-300/45 hover:bg-amber-400/10 hover:text-amber-200",
+          )}
+          disabled={rowPending}
+          onClick={() => onToggleMain(account)}
+          title={account.isMain ? "Quitar principal" : "Marcar principal"}
+          type="button"
+        >
+          <span aria-hidden="true">★</span>
+        </button>
         <Link
           className="inline-flex h-9 items-center justify-center rounded-lg border border-violet-300/40 bg-violet-500/10 px-3 text-xs font-black text-violet-100 shadow-lg shadow-violet-500/12 transition hover:border-violet-200/70 hover:bg-violet-500/16"
           href={`/perfil/cuenta/${account.id}`}
